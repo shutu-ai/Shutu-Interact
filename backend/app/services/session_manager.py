@@ -37,6 +37,13 @@ class SessionManager:
         self._sessions[session_id] = updated
         return updated
 
+    def append_child_text(self, session_id: str, child_text: str) -> Session:
+        """Record the child's utterance so the engine keeps real history."""
+        session = self.get(session_id)
+        updated = replace(session, child_texts=session.child_texts + (child_text,))
+        self._sessions[session_id] = updated
+        return updated
+
     def end(self, session_id: str) -> None:
         """Delete the session and all of its context."""
         self.get(session_id)  # raises SessionNotFoundError when unknown

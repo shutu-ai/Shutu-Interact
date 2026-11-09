@@ -38,6 +38,8 @@ async def speech(session_id: str, audio: UploadFile) -> Any:
     if not transcript:
         return JSONResponse(status_code=422, content=_ASR_FAILED)
 
+    container.manager.append_child_text(session_id, transcript)
+    session = container.manager.get(session_id)
     turn = container.engine.respond(session, transcript)
     container.manager.append_turn(session_id, turn)
     return ok({"transcript": transcript, **turn_to_data(turn)})

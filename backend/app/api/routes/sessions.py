@@ -45,6 +45,8 @@ def create_session(payload: CreateSessionRequest) -> dict[str, Any]:
 @router.post("/api/sessions/{session_id}/replies")
 def reply(session_id: str, payload: ReplyRequest) -> Any:
     try:
+        container.manager.get(session_id)
+        container.manager.append_child_text(session_id, payload.text)
         session = container.manager.get(session_id)
     except SessionNotFoundError:
         return JSONResponse(status_code=404, content=_SESSION_NOT_FOUND)

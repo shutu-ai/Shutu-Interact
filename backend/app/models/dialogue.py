@@ -30,6 +30,7 @@ class Session:
     age_group: str
     topic: str
     turns: Tuple[Turn, ...] = ()
+    child_texts: Tuple[str, ...] = ()
 
     @property
     def last(self) -> Turn | None:

@@ -23,7 +23,7 @@ _PRAISES: Tuple[str, ...] = (
     "You are doing great!",
 )
 
-_FINISH_PRAISE: str = (
+FINISH_PRAISE: str = (
     "Amazing talking with you! You did a wonderful job! See you next time!"
 )
 
@@ -163,7 +163,7 @@ class MockDialogueEngine:
         next_index = last.turn + 1
         if next_index >= MAX_TURNS:
             return Turn(
-                assistant_text=_FINISH_PRAISE,
+                assistant_text=FINISH_PRAISE,
                 state=STATE_PRAISE,
                 turn=MAX_TURNS,
                 finished=True,
