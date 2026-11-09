@@ -113,8 +113,11 @@ def test_reply_redirects_unsafe_child_input(
     assert engine.calls == 0  # unsafe text never reaches the dialogue engine
     expected = MockDialogueEngine().respond(snapshot, "i have a gun")
     assert data["assistant_text"] == expected.assistant_text
-    # Unsafe child text is never persisted into the session context.
-    assert container.manager.get(sid).child_texts == ()
+    # Unsafe child text is never persisted, but a placeholder keeps the
+    # turns/child_texts pairing aligned for the LLM engine's history.
+    texts = container.manager.get(sid).child_texts
+    assert texts == ("[redacted]",)
+    assert "gun" not in "".join(texts)
     assert "input_guarded" in caplog.text
     assert "gun" not in caplog.text  # transcript itself is never logged
 
@@ -157,7 +160,9 @@ def test_speech_redirects_unsafe_transcript(
     assert engine.calls == 0
     expected = MockDialogueEngine().respond(snapshot, "i have a gun")
     assert data["assistant_text"] == expected.assistant_text
-    assert container.manager.get(sid).child_texts == ()
+    texts = container.manager.get(sid).child_texts
+    assert texts == ("[redacted]",)
+    assert "gun" not in "".join(texts)
 
 
 def test_engine_crash_returns_error_envelope(

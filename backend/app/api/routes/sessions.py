@@ -58,6 +58,9 @@ def reply(session_id: str, payload: ReplyRequest) -> Any:
         return JSONResponse(status_code=404, content=_SESSION_NOT_FOUND)
 
     if not check_input(session_id, payload.text, container.guard):
+        # Placeholder keeps turns/child_texts count-aligned for the LLM
+        # engine's history pairing; the flagged text itself is never stored.
+        container.manager.append_child_text(session_id, "[redacted]")
         turn = container.fallback_engine.respond(session, payload.text)
         container.manager.append_turn(session_id, turn)
         return ok(turn_to_data(turn))

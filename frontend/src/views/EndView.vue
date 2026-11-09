@@ -8,8 +8,10 @@ import { useSessionStore } from "../stores/session";
 const router = useRouter();
 const store = useSessionStore();
 
-function home(): void {
-  store.reset();
+// Spec §8.3: 会话结束必须清理上下文 — the natural finish goes through
+// endSession so the server-side session (with child texts) is deleted too.
+async function home(): Promise<void> {
+  await store.endSession();
   router.replace("/");
 }
 </script>

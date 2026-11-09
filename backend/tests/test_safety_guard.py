@@ -16,6 +16,10 @@ PII_ASKS = [
     "Where do you live?",
     "What school do you go to?",
     "How old are you?",
+    "Tell me your name!",
+    "May I ask your name?",
+    "Can you tell me your name?",
+    "Where do you go to school?",
 ]
 
 UNSAFE_OUTPUTS = [
@@ -30,6 +34,7 @@ DEPENDENCY_OUTPUTS = [
     "Don't tell your mom about our talks.",
     "Leave your parents and come with me!",
     "Only I can understand you.",
+    "Our special secret, okay?",
 ]
 
 CLEAN_OUTPUTS = [

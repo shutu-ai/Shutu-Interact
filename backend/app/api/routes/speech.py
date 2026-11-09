@@ -41,6 +41,9 @@ async def speech(session_id: str, audio: UploadFile) -> Any:
         return JSONResponse(status_code=422, content=_ASR_FAILED)
 
     if not check_input(session_id, transcript, container.guard):
+        # Placeholder keeps turns/child_texts count-aligned for the LLM
+        # engine's history pairing; the flagged text itself is never stored.
+        container.manager.append_child_text(session_id, "[redacted]")
         turn = container.fallback_engine.respond(session, transcript)
         container.manager.append_turn(session_id, turn)
         return ok({"transcript": transcript, **turn_to_data(turn)})

@@ -26,11 +26,12 @@ def _compile(pairs: tuple[tuple[str, str], ...]) -> tuple[Rule, ...]:
 
 
 _PII: tuple[Rule, ...] = _compile((
-    (r"what\s*(?:is|'s)\s*your\s*name", "asks_child_name"),
+    (r"\byour\s+name\b", "asks_child_name"),
     (r"\byour\s+(?:phone|telephone)\b", "asks_phone"),
     (r"\bwhere\s+do\s+you\s+live\b", "asks_address"),
     (r"\bwhere\s+are\s+you\s+from\b", "asks_hometown"),
     (r"\b(?:what|which)\s+school\b", "asks_school"),
+    (r"\bgo\s+to\s+(?:a\s+)?school\b", "asks_school"),
     (r"\bhow\s+old\s+are\s+you\b", "asks_age"),
 ))
 
@@ -62,7 +63,7 @@ _MEDICAL_LEGAL: tuple[Rule, ...] = _compile((
 
 _DEPENDENCY: tuple[Rule, ...] = _compile((
     (r"keep\s+(?:this|it|our)\s+(?:a\s+)?secret", "secrecy"),
-    (r"our\s+(?:little\s+)?secret", "secrecy"),
+    (r"\b(?:our|a)\s+(?:little\s+|special\s+)?secret\b", "secrecy"),
     (
         r"don'?t\s+tell\s+your\s+(?:mom|dad|parents|mother|father|teacher)",
         "secrecy",
