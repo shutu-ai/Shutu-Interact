@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, createSession, endSession, reply } from "./api";
+import { ApiError, createSession, endSession, reply, sendSpeech } from "./api";
 
 const okEnvelope = (data: unknown) => ({
   ok: true,
@@ -109,5 +109,38 @@ describe("api client", () => {
       vi.fn().mockResolvedValue(okEnvelope({ ended: true })),
     );
     await expect(endSession("abc123")).resolves.toEqual({ ended: true });
+  });
+
+  it("sendSpeech uploads FormData and returns transcript + turn data", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okEnvelope({
+        transcript: "I like dogs.",
+        assistant_text: "Great job! Do you have a pet?",
+        state: "listening",
+        turn: 1,
+        finished: false,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const blob = new Blob(["fake-audio"], { type: "audio/webm" });
+    const data = await sendSpeech("abc123", blob, "audio/webm");
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "http://127.0.0.1:8000/api/sessions/abc123/speech",
+    );
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.body).toBeInstanceOf(FormData);
+    const form = init.body as FormData;
+    const uploaded = form.get("audio");
+    expect(uploaded).toBeInstanceOf(Blob);
+    expect(init.headers).not.toHaveProperty("Content-Type");
+    expect(data).toEqual({
+      transcript: "I like dogs.",
+      assistantText: "Great job! Do you have a pet?",
+      state: "listening",
+      turn: 1,
+      finished: false,
+    });
   });
 });

@@ -21,3 +21,7 @@ export interface CreateSessionData extends TurnData {
 export interface EndData {
   ended: boolean;
 }
+
+export interface SpeechData extends TurnData {
+  transcript: string;
+}

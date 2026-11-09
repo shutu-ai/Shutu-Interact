@@ -10,8 +10,16 @@ const router = useRouter();
 const store = useSessionStore();
 const draft = ref("");
 
-// MOCK INPUT (Phase 1). REPLACEMENT POINT: Task 3 (Phase 2) swaps this for
-// MediaRecorder voice capture with ASR upload.
+// Voice is the primary channel (半双工: tap → talk → tap → reply plays).
+async function toggleMic(): Promise<void> {
+  if (store.recording) {
+    await store.finishVoice();
+  } else {
+    await store.beginVoice();
+  }
+}
+
+// Text stays as a fallback for noisy front desks and mic failures.
 async function send(): Promise<void> {
   await store.sendChildText(draft.value);
   draft.value = "";
@@ -39,14 +47,30 @@ watch(
     <CocoCharacter :state="store.characterState" />
     <div class="bubble">{{ store.assistantText }}</div>
     <p v-if="store.error" class="error">{{ store.error }}</p>
+    <button
+      type="button"
+      class="mic-button"
+      :class="{ recording: store.recording }"
+      :disabled="store.busy"
+      @click="toggleMic"
+    >
+      {{ store.recording ? "⏹ 停止 Stop" : "🎤 说话 Talk!" }}
+    </button>
+    <p class="hint" :class="{ listening: store.recording }">
+      {{
+        store.recording
+          ? "I'm listening… 我在听,请说英语"
+          : "Tap the mic and answer in English · 点麦克风用英语回答"
+      }}
+    </p>
     <form class="mock-input" @submit.prevent="send">
       <input
         v-model="draft"
         type="text"
-        :disabled="store.busy"
-        placeholder="Mock: 请输入孩子说的话(语音功能下一阶段接入)"
+        :disabled="store.busy || store.recording"
+        placeholder="文字备用 Text fallback(语音不可用时)"
       />
-      <PrimaryButton :disabled="store.busy || !draft.trim()">
+      <PrimaryButton :disabled="store.busy || store.recording || !draft.trim()">
         发送 Send
       </PrimaryButton>
     </form>
@@ -56,5 +80,57 @@ watch(
 <style scoped>
 .session-page {
   position: relative;
+}
+
+.mic-button {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: none;
+  background: #e5484d;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #b3323a;
+  transition:
+    transform 0.05s ease,
+    box-shadow 0.05s ease;
+}
+
+.mic-button:active {
+  transform: translateY(5px);
+  box-shadow: 0 3px 0 #b3323a;
+}
+
+.mic-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.mic-button.recording {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.hint {
+  font-size: 1.15rem;
+  margin: 0;
+  text-align: center;
+  min-height: 1.6em;
+}
+
+.hint.listening {
+  color: #2f6fed;
+  font-weight: 700;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
 }
 </style>

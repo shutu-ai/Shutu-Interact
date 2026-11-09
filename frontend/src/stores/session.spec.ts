@@ -2,15 +2,41 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 
 import * as api from "../services/api";
+import * as voice from "../services/voice";
 import { useSessionStore } from "./session";
 
 vi.mock("../services/api", () => ({
+  ApiError: class MockApiError extends Error {
+    constructor(
+      public code: string,
+      message: string,
+    ) {
+      super(message);
+      this.name = "ApiError";
+    }
+  },
   createSession: vi.fn(),
   reply: vi.fn(),
   endSession: vi.fn(),
+  sendSpeech: vi.fn(),
+}));
+
+vi.mock("../services/voice", () => ({
+  startListening: vi.fn(),
+  speak: vi.fn(),
 }));
 
 const mocked = vi.mocked(api);
+const mockedVoice = vi.mocked(voice);
+
+function mockRecording(): void {
+  mockedVoice.startListening.mockResolvedValue({
+    stop: vi
+      .fn()
+      .mockResolvedValue({ blob: new Blob(["x"]), mimeType: "audio/webm" }),
+    cancel: vi.fn(),
+  });
+}
 
 const greetingData = {
   sessionId: "sid-1",
@@ -108,6 +134,109 @@ describe("session store", () => {
 
     expect(store.sessionId).toBeNull();
     expect(store.phase).toBe("welcome");
+    expect(store.error).not.toBeNull();
+  });
+
+  it("sendChildVoice records, uploads, applies the turn and speaks", async () => {
+    mocked.createSession.mockResolvedValue(greetingData);
+    const store = useSessionStore();
+    store.chooseAge("7-9");
+    await store.chooseTopic("animals");
+
+    mockRecording();
+    mocked.sendSpeech.mockResolvedValue({
+      transcript: "I like dogs.",
+      assistantText: "Great job! Do you have a pet?",
+      state: "listening",
+      turn: 1,
+      finished: false,
+    });
+
+    await store.beginVoice();
+    expect(store.recording).toBe(true);
+
+    await store.finishVoice();
+
+    expect(mocked.sendSpeech).toHaveBeenCalledWith(
+      "sid-1",
+      expect.any(Blob),
+      "audio/webm",
+    );
+    expect(store.turn).toBe(1);
+    expect(store.characterState).toBe("listening");
+    expect(mockedVoice.speak).toHaveBeenCalledWith(
+      "Great job! Do you have a pet?",
+    );
+    expect(store.recording).toBe(false);
+    expect(store.busy).toBe(false);
+  });
+
+  it("retries ASR once with the same recording before failing", async () => {
+    mocked.createSession.mockResolvedValue(greetingData);
+    const store = useSessionStore();
+    store.chooseAge("7-9");
+    await store.chooseTopic("animals");
+
+    mockRecording();
+    const asrError = new api.ApiError(
+      "asr_failed",
+      "Speech recognition failed.",
+    );
+    mocked.sendSpeech
+      .mockRejectedValueOnce(asrError)
+      .mockRejectedValueOnce(asrError);
+
+    await store.beginVoice();
+    await store.finishVoice();
+
+    expect(mocked.sendSpeech).toHaveBeenCalledTimes(2);
+    expect(store.error).not.toBeNull();
+    expect(store.busy).toBe(false);
+  });
+
+  it("recovers when the ASR retry succeeds", async () => {
+    mocked.createSession.mockResolvedValue(greetingData);
+    const store = useSessionStore();
+    store.chooseAge("7-9");
+    await store.chooseTopic("animals");
+
+    mockRecording();
+    const asrError = new api.ApiError(
+      "asr_failed",
+      "Speech recognition failed.",
+    );
+    mocked.sendSpeech
+      .mockRejectedValueOnce(asrError)
+      .mockResolvedValueOnce({
+        transcript: "I like dogs.",
+        assistantText: "Awesome! What animal do you think is funny?",
+        state: "listening",
+        turn: 1,
+        finished: false,
+      });
+
+    await store.beginVoice();
+    await store.finishVoice();
+
+    expect(mocked.sendSpeech).toHaveBeenCalledTimes(2);
+    expect(store.turn).toBe(1);
+    expect(store.error).toBeNull();
+    expect(mockedVoice.speak).toHaveBeenCalled();
+  });
+
+  it("reports a friendly error when the microphone is unavailable", async () => {
+    mocked.createSession.mockResolvedValue(greetingData);
+    const store = useSessionStore();
+    store.chooseAge("7-9");
+    await store.chooseTopic("animals");
+
+    mockedVoice.startListening.mockRejectedValue(
+      new Error("NotAllowedError"),
+    );
+
+    await store.beginVoice();
+
+    expect(store.recording).toBe(false);
     expect(store.error).not.toBeNull();
   });
 });

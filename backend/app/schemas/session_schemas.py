@@ -5,9 +5,9 @@ Envelope contract (frozen in Task 1):
   error   -> 4xx {"success": false, "error": {"code", "message"}}
 """
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import AfterValidator, BaseModel, field_validator
 
 from app.models.dialogue import AGE_GROUPS, TOPICS, Turn
 
@@ -27,6 +27,16 @@ def turn_to_data(turn: Turn) -> dict[str, Any]:
         "turn": turn.turn,
         "finished": turn.finished,
     }
+
+
+def _not_blank(value: str) -> str:
+    stripped = value.strip()
+    if not stripped:
+        raise ValueError("text must not be empty")
+    return stripped
+
+
+NotBlankText = Annotated[str, AfterValidator(_not_blank)]
 
 
 class CreateSessionRequest(BaseModel):
@@ -49,12 +59,8 @@ class CreateSessionRequest(BaseModel):
 
 
 class ReplyRequest(BaseModel):
-    text: str
+    text: NotBlankText
 
-    @field_validator("text")
-    @classmethod
-    def _text_not_blank(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("text must not be empty")
-        return stripped
+
+class TtsRequest(BaseModel):
+    text: NotBlankText

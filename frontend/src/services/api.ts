@@ -6,7 +6,13 @@
 
 import { z } from "zod";
 
-import type { CreateSessionData, EndData, TurnData } from "../types/session";
+import type {
+  CreateSessionData,
+  EndData,
+  SpeechData,
+  TurnData,
+} from "../types/session";
+
 
 const API_BASE: string =
   import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
@@ -67,6 +73,22 @@ const endDataSchema = z
   .object({ ended: z.boolean() })
   .transform((raw) => ({ ended: raw.ended }));
 
+const speechDataSchema = z
+  .object({
+    transcript: z.string(),
+    assistant_text: z.string(),
+    state: z.enum(["greeting", "listening", "praise"]),
+    turn: z.number().int(),
+    finished: z.boolean(),
+  })
+  .transform((raw) => ({
+    transcript: raw.transcript,
+    assistantText: raw.assistant_text,
+    state: raw.state,
+    turn: raw.turn,
+    finished: raw.finished,
+  }));
+
 async function request<T>(
   path: string,
   schema: z.ZodType<T, z.ZodTypeDef, unknown>,
@@ -76,9 +98,16 @@ async function request<T>(
   try {
     response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers:
+        options.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" },
       body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+        options.body === undefined
+          ? undefined
+          : options.body instanceof FormData
+            ? options.body
+            : JSON.stringify(options.body),
     });
   } catch {
     throw new ApiError(
@@ -151,5 +180,20 @@ export function endSession(sessionId: string): Promise<EndData> {
     `/api/sessions/${encodeURIComponent(sessionId)}/end`,
     endDataSchema,
     { body: {} },
+  );
+}
+
+export function sendSpeech(
+  sessionId: string,
+  audio: Blob,
+  mimeType: string,
+): Promise<SpeechData> {
+  const form = new FormData();
+  const extension = mimeType.includes("mp4") ? "m4a" : "webm";
+  form.append("audio", audio, `speech.${extension}`);
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/speech`,
+    speechDataSchema,
+    { body: form },
   );
 }
