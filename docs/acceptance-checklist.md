@@ -7,7 +7,7 @@
 | 命令 | 结果 |
 |------|------|
 | `backend/.venv/Scripts/python.exe -m pytest tests/ -q` | 122 passed |
-| `cd frontend && npx vitest run --reporter=basic` | 48 passed(12 文件) |
+| `cd frontend && npx vitest run --reporter=basic` | 53 passed(12 文件) |
 | `cd frontend && npm run build` | vue-tsc 类型检查 + vite 构建通过 |
 | CI(`.github/workflows/ci.yml`) | push/PR 触发:pytest(Python 3.12,严格注解)+ vitest + build |
 

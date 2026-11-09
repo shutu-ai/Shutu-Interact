@@ -3,8 +3,8 @@
   "repository": "https://github.com/shutu-ai/Shutu-Interact",
   "branch": "feature/mvp-closure",
   "base_sha": "fc46da5b69b9405a72aff82529965bce525da186",
-  "evaluated_sha": "c6f46a08091e4a365176115da35fbf5a59818ceb",
-  "evaluated_sha_note": "All gate commands were run on the c6f46a0 tree plus this evidence/docs commit (docs, CI config and evidence files only; no app code changes after c6f46a0). The G4 commit containing this file is the terminal commit of the branch.",
+  "evaluated_sha": "7435628888b1e050834f14c5f8d1e79dfdc025e0",
+  "evaluated_sha_note": "All gate commands were run on the 7435628 tree (the whole-branch-review fix pass) plus the evidence/docs commit containing this file (docs only after 7435628).",
   "gates": {
     "g0_baseline": {
       "status": "PASS",
@@ -52,7 +52,7 @@
     },
     "frontend": {
       "command": "cd frontend && npx vitest run --reporter=basic",
-      "result": "48 passed (12 files)"
+      "result": "53 passed (12 files; includes 5 review-fix regression tests)"
     },
     "build": {
       "command": "cd frontend && npm run build",

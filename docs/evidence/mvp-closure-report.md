@@ -1,6 +1,6 @@
 # MVP Closure 证据报告 — 2026-11-09
 
-分支 `feature/mvp-closure`,base `fc46da5b`,evaluate 于 `c6f46a0`(此后仅追加 docs/CI/evidence 文件,未改应用代码)。机器可读版:[mvp-closure.json](mvp-closure.json)。
+分支 `feature/mvp-closure`,base `fc46da5b`,evaluate 于 `7435628`(整分支复审修复后的最终代码提交;其后仅 docs/evidence 文件)。机器可读版:[mvp-closure.json](mvp-closure.json)。
 
 ## 门禁状态
 
@@ -21,7 +21,7 @@ backend/.venv/Scripts/python.exe -m pytest tests/ -q
 → 122 passed (Python 3.14 local; CI also runs 3.12)
 
 cd frontend && npx vitest run --reporter=basic
-→ Test Files  12 passed (12) / Tests  48 passed (48)
+→ Test Files  12 passed (12) / Tests  53 passed (53)
 
 cd frontend && npm run build
 → vue-tsc --noEmit 通过,vite build 成功
@@ -41,7 +41,18 @@ gh run view 42657133797 (SHA fd542a5)
 | f0a57f9 | G2 | 半双工会话生命周期与恢复 |
 | c6f46a0 | G3 | 儿童隐私门禁与有界语音上传 |
 | fd542a5 | G4 | CI 工作流、验收清单重构、证据文件 |
-| (本次) | G4 | 证据回填:CI run 42657133797 全绿 |
+| 546181c | G4 | 证据回填:CI run 42657133797 全绿 |
+| 7435628 | 复审修复 | 整分支复审:停止按钮可达 + 告别语播放(2 项 Important 修复,5 个回归测试) |
+| (本次) | 复审回填 | 证据更新至 122+53 实测值与复审结论 |
+
+## 最终复审(整分支,独立评审)
+
+结论:**0 Critical / 2 Important(已修)/ 6 Minor(记账延后)**。修复均 RED→GREEN 并全绿套件验证:
+
+1. **录音中停止按钮被禁用(Important,已修)**:`canRecord` 要求 `idle`,录音一开始按钮就禁用 → ⏹ 停止不可达,录音只能等 180s 上限。修复:listening 态保持可点;视图测试驱动 按钮→开始→按钮→停止 全链路。
+2. **自然结束告别语未播放(Important,已修)**:闭包文档 G2 要求"保留最后一句结束语直到播放完成或超时,再返回欢迎页";原实现直接跳结束页并停止语音。修复:结束页播放告别语(15s 超时兜底),播完自动回欢迎页。
+
+延后的 Minor(均记录在案):陈旧 `finally` 清 busy 的极窄并发窗口;asr.py 中 MockSpeechRecognizer 重复定义;护栏正则未覆盖缩略语("My name's")与部分注入变体(归入试点前 A7 校准);限流器键不回收/POST /sessions 无限流/文本无长度上限/MAX_UPLOAD_BYTES≤0 时全量读;会话过期竞态返回 500 而非 404;超时/遗弃会话最长滞留内存 600s("立即删除"表述已在门禁文档中按 TTL 语义理解)。
 
 ## DoD 判定
 
