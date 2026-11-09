@@ -10,7 +10,7 @@
 | G1 真实 ASR | **PASS(离线合同)** / G1_LIVE=**BLOCKED_CREDENTIALS** | `OpenAICompatibleTranscriber` 实现 SpeechRecognizer 协议;`ASR_PROVIDER=mock\|openai` 显式选择,openai 缺 key 拒绝启动(绝不静默回退);13 个离线合同测试;`scripts/asr_smoke.py` 就绪,但本环境无凭据,真实调用未发生 |
 | G2 会话生命周期 | **PASS** | 严格半双工;flowEpoch 防旧响应串新会话;ASR 失败重录新音频(预算 1,绝不重发原音频);自然结束即删服务端会话;180s 总上限 + 60s 闲置;404 恢复;退出停止合成与录音轨 |
 | G3 隐私与安全 | **PASS** | 诚实隐私文案(移除"不收集任何个人信息");家长/监护人确认门;输入侧 PII 自披露/注入护栏(中英,求助不静音);转写不回传;5MB/类型有界上传;会话级限流;凭据仅服务端;机器人身份;[privacy-and-pilot-gates.md](../privacy-and-pilot-gates.md) 已核查 13 项 |
-| G4 CI 与证据 | **PASS_LOCAL_PENDING_CI** | ci.yml 已提交(pytest 3.12 + vitest + build,mock-only,无密钥);.env.examples 完备;README 以实测数字修订;四类验收清单 + 故障演练矩阵;推送后需在 GitHub Actions 看到同 SHA 绿色运行方可记 PASS |
+| G4 CI 与证据 | **PASS** | ci.yml 已提交(pytest 3.12 + vitest + build,mock-only,无密钥);.env.examples 完备;README 以实测数字修订;四类验收清单 + 故障演练矩阵;CI 在推送 SHA `fd542a5` 上真实运行且全绿([run 42657133797](https://github.com/shutu-ai/Shutu-Interact/actions/runs/42657133797):backend (3.12) 12s,frontend 26s) |
 | G5 设备 | **BLOCKED_DEVICE** | 本环境无目标平板/大屏/真实麦克风;延迟 p90 未测(json 中为 null,不填猜测值) |
 | G5 试点 | **BLOCKED_COMPLIANCE** | 合规审核(A2)、监护人授权形式(A3)、供应商留存政策(A1)、CORS 收紧(A8)未关闭;关闭前禁止真实儿童接触 |
 
@@ -27,6 +27,9 @@ cd frontend && npm run build
 → vue-tsc --noEmit 通过,vite build 成功
 
 git rev-parse fc46da5 → fc46da5b69b9405a72aff82529965bce525da186
+
+gh run view 42657133797 (SHA fd542a5)
+→ ✓ backend (3.12) in 12s   ✓ frontend in 26s   (conclusion: success)
 ```
 
 ## 提交链
@@ -37,7 +40,8 @@ git rev-parse fc46da5 → fc46da5b69b9405a72aff82529965bce525da186
 | 634ee4e | G1 | 可插拔真实 ASR provider + 诚实语音状态 |
 | f0a57f9 | G2 | 半双工会话生命周期与恢复 |
 | c6f46a0 | G3 | 儿童隐私门禁与有界语音上传 |
-| (本次) | G4 | CI 工作流、验收清单重构、证据文件 |
+| fd542a5 | G4 | CI 工作流、验收清单重构、证据文件 |
+| (本次) | G4 | 证据回填:CI run 42657133797 全绿 |
 
 ## DoD 判定
 

@@ -24,8 +24,15 @@
       "summary": "Honest privacy copy (over-absolute claim removed), guardian confirmation gate before mic, input-side PII self-disclosure/injection guard (EN+CN) with help-seeking never silenced, transcript never echoed to client, bounded 5MB audio/* uploads, per-session 12/min rate limit, credentials server-side only, robot identity in prompt, docs/privacy-and-pilot-gates.md 已核查13/待核查8."
     },
     "g4_ci_evidence": {
-      "status": "PASS_LOCAL_PENDING_CI",
-      "summary": ".github/workflows/ci.yml committed (pytest on 3.12 + vitest + build, mock-only, no secrets); .env.examples complete; README overhauled with measured counts; acceptance checklist restructured into 4 gate categories + failure drill matrix; evidence files written. CI run on the pushed SHA is the remaining condition for PASS — verify via gh after push."
+      "status": "PASS",
+      "summary": ".github/workflows/ci.yml committed (pytest on 3.12 + vitest + build, mock-only, no secrets); .env.examples complete; README overhauled with measured counts; acceptance checklist restructured into 4 gate categories + failure drill matrix; evidence files written.",
+      "ci_run": {
+        "id": 42657133797,
+        "sha": "fd542a5",
+        "url": "https://github.com/shutu-ai/Shutu-Interact/actions/runs/42657133797",
+        "result": "success",
+        "jobs": "backend (3.12) 12s; frontend 26s — both green on the pushed SHA"
+      }
     },
     "g5_device": {
       "status": "BLOCKED_DEVICE",
@@ -56,7 +63,6 @@
   "latency_p90_note": "not_run — requires real device with real ASR credentials (G1_LIVE + G5_DEVICE); do not fill with a guessed number.",
   "blocking_issues": [
     "G1_LIVE BLOCKED_CREDENTIALS: no ASR provider key in this environment — run backend/scripts/asr_smoke.py with authorized-adult audio once creds exist",
-    "G4 PASS requires a green CI run on the pushed SHA (gh or GitHub Actions UI)",
     "G5_DEVICE BLOCKED_DEVICE: no kiosk hardware; execute docs/acceptance-checklist.md §三 on target tablet/large screen",
     "G5_PILOT BLOCKED_COMPLIANCE: close privacy-and-pilot-gates.md A1/A2/A3 (vendor retention policy, institutional approval, guardian authorization) before any real-child contact",
     "DoD not met: no licensed tester has spoken real English sentences to Coco on the target device yet"
