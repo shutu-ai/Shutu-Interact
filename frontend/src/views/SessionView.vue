@@ -46,7 +46,8 @@ watch(
     </button>
     <CocoCharacter :state="store.characterState" />
     <div class="bubble">{{ store.assistantText }}</div>
-    <p v-if="store.error" class="error">{{ store.error }}</p>
+    <p class="progress">Round {{ store.turn }} / {{ store.maxTurns }}</p>
+    <p v-if="store.error" class="error" role="alert">{{ store.error }}</p>
     <button
       type="button"
       class="mic-button"
@@ -58,9 +59,11 @@ watch(
     </button>
     <p class="hint" :class="{ listening: store.recording }">
       {{
-        store.recording
-          ? "I'm listening… 我在听,请说英语"
-          : "Tap the mic and answer in English · 点麦克风用英语回答"
+        store.busy
+          ? "Coco is thinking… Coco 想一想…"
+          : store.recording
+            ? "I'm listening… 我在听,请说英语"
+            : "Tap the mic and answer in English · 点麦克风用英语回答"
       }}
     </p>
     <form class="mock-input" @submit.prevent="send">
@@ -117,6 +120,13 @@ watch(
   margin: 0;
   text-align: center;
   min-height: 1.6em;
+}
+
+.progress {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #8a7a5c;
+  letter-spacing: 0.04em;
 }
 
 .hint.listening {

@@ -1,7 +1,10 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import FullscreenToggle from "./components/FullscreenToggle.vue";
+</script>
 
 <template>
   <main class="app-shell">
+    <FullscreenToggle />
     <RouterView />
   </main>
 </template>

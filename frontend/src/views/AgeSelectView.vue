@@ -18,10 +18,17 @@ function choose(value: AgeGroup): void {
   store.chooseAge(value);
   router.push("/topic");
 }
+
+function goBack(): void {
+  router.push("/");
+}
 </script>
 
 <template>
   <section class="page">
+    <button type="button" class="back-button" @click="goBack">
+      ← 上一步 Back
+    </button>
     <h1 class="title">你几岁啦? · How old are you?</h1>
     <div class="choices">
       <PrimaryButton

@@ -26,12 +26,19 @@ async function choose(value: Topic): Promise<void> {
     router.push("/session");
   }
 }
+
+function goBack(): void {
+  router.push("/age");
+}
 </script>
 
 <template>
   <section class="page">
+    <button type="button" class="back-button" @click="goBack">
+      ← 上一步 Back
+    </button>
     <h1 class="title">聊什么? · Pick a topic</h1>
-    <p v-if="store.error" class="error">{{ store.error }}</p>
+    <p v-if="store.error" class="error" role="alert">{{ store.error }}</p>
     <div class="choices">
       <PrimaryButton
         v-for="topic in TOPICS"

@@ -94,3 +94,14 @@ body {
   background: #fff;
   cursor: pointer;
 }
+
+.back-button {
+  align-self: flex-start;
+  min-height: 56px;
+  padding: 8px 20px;
+  font-size: 1.1rem;
+  border-radius: 16px;
+  border: 2px solid #d9c9a8;
+  background: #fff;
+  cursor: pointer;
+}
