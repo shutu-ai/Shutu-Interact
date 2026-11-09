@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-11-09",
+  "repository": "https://github.com/shutu-ai/Shutu-Interact",
+  "branch": "feature/mvp-closure",
+  "base_sha": "fc46da5b69b9405a72aff82529965bce525da186",
+  "evaluated_sha": "c6f46a08091e4a365176115da35fbf5a59818ceb",
+  "evaluated_sha_note": "All gate commands were run on the c6f46a0 tree plus this evidence/docs commit (docs, CI config and evidence files only; no app code changes after c6f46a0). The G4 commit containing this file is the terminal commit of the branch.",
+  "gates": {
+    "g0_baseline": {
+      "status": "PASS",
+      "summary": "B-01 undefined 'Tuple' annotation fixed (builtin tuple[...]); pkgutil-wide import regression test added; uvicorn boots; pytest green on local 3.14 with CI proving 3.12 strict annotations."
+    },
+    "g1_real_asr": {
+      "status": "PASS_OFFLINE",
+      "g1_live": "BLOCKED_CREDENTIALS",
+      "summary": "OpenAI-compatible transcriber under SpeechRecognizer protocol; ASR_PROVIDER=mock|openai explicit selection, openai without key refuses to start; 13 offline contract tests (multipart shape, filename mapping, empty transcript, 429, ConnectTimeout, container selection). Live smoke deferred: scripts/asr_smoke.py exists but no provider credentials available in this environment."
+    },
+    "g2_session_lifecycle": {
+      "status": "PASS",
+      "summary": "Strict half-duplex (mic gated by voiceState), flowEpoch stale-response guard, ASR failure forces NEW recording (budget 1, original never resent), natural finish auto-deletes server session, 180s duration cap + 60s idle timeout both ends, 404 recovery, exit stops speechSynthesis + recorder tracks; no dialogue content in any browser storage."
+    },
+    "g3_privacy_safety": {
+      "status": "PASS",
+      "summary": "Honest privacy copy (over-absolute claim removed), guardian confirmation gate before mic, input-side PII self-disclosure/injection guard (EN+CN) with help-seeking never silenced, transcript never echoed to client, bounded 5MB audio/* uploads, per-session 12/min rate limit, credentials server-side only, robot identity in prompt, docs/privacy-and-pilot-gates.md 已核查13/待核查8."
+    },
+    "g4_ci_evidence": {
+      "status": "PASS_LOCAL_PENDING_CI",
+      "summary": ".github/workflows/ci.yml committed (pytest on 3.12 + vitest + build, mock-only, no secrets); .env.examples complete; README overhauled with measured counts; acceptance checklist restructured into 4 gate categories + failure drill matrix; evidence files written. CI run on the pushed SHA is the remaining condition for PASS — verify via gh after push."
+    },
+    "g5_device": {
+      "status": "BLOCKED_DEVICE",
+      "summary": "No target kiosk hardware (tablet/large screen + real microphone) available in this environment; latency p90 and on-device flows unmeasured."
+    },
+    "g5_pilot": {
+      "status": "BLOCKED_COMPLIANCE",
+      "summary": "No institutional compliance approval (A2) or guardian-authorization decision (A3); ASR vendor retention policy unverified (A1); CORS still LAN-open (A8). Real-child pilot forbidden until these close."
+    }
+  },
+  "tests": {
+    "backend": {
+      "command": "backend/.venv/Scripts/python.exe -m pytest tests/ -q",
+      "result": "122 passed",
+      "interpreter_local": "Python 3.14 (PEP 649 lazy annotations)",
+      "interpreter_ci": "Python 3.12 (strict annotation evaluation; proves B-01 fix)"
+    },
+    "frontend": {
+      "command": "cd frontend && npx vitest run --reporter=basic",
+      "result": "48 passed (12 files)"
+    },
+    "build": {
+      "command": "cd frontend && npm run build",
+      "result": "vue-tsc type check clean + vite build succeeded"
+    }
+  },
+  "latency_p90_ms": null,
+  "latency_p90_note": "not_run — requires real device with real ASR credentials (G1_LIVE + G5_DEVICE); do not fill with a guessed number.",
+  "blocking_issues": [
+    "G1_LIVE BLOCKED_CREDENTIALS: no ASR provider key in this environment — run backend/scripts/asr_smoke.py with authorized-adult audio once creds exist",
+    "G4 PASS requires a green CI run on the pushed SHA (gh or GitHub Actions UI)",
+    "G5_DEVICE BLOCKED_DEVICE: no kiosk hardware; execute docs/acceptance-checklist.md §三 on target tablet/large screen",
+    "G5_PILOT BLOCKED_COMPLIANCE: close privacy-and-pilot-gates.md A1/A2/A3 (vendor retention policy, institutional approval, guardian authorization) before any real-child contact",
+    "DoD not met: no licensed tester has spoken real English sentences to Coco on the target device yet"
+  ],
+  "evidence_paths": [
+    "docs/evidence/mvp-closure-report.md",
+    "docs/evidence/mvp-closure.json",
+    "docs/acceptance-checklist.md",
+    "docs/privacy-and-pilot-gates.md",
+    "backend/scripts/asr_smoke.py",
+    ".github/workflows/ci.yml"
+  ]
+}

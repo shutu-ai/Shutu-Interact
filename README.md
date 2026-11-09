@@ -1,6 +1,6 @@
 # AI English Greeter (Coco English) — MVP
 
-前台 kiosk 应用:在深圳少儿英语培训中心前台,卡通机器人 Coco 通过语音与到访儿童(4–12 岁)进行 1–3 分钟的受控英语互动。方案见 `01_项目方案_AI_English_Greeter_MVP.md`,任务拆解见 `02_Codex任务提示词_AI_English_Greeter.md`,人工验收清单见 [docs/acceptance-checklist.md](docs/acceptance-checklist.md)。
+前台 kiosk 应用:在深圳少儿英语培训中心前台,卡通机器人 Coco 通过语音与到访儿童(4–12 岁)进行 1–3 分钟的受控英语互动。方案见 `01_项目方案_AI_English_Greeter_MVP.md`,任务拆解见 `02_Codex任务提示词_AI_English_Greeter.md`,人工验收清单见 [docs/acceptance-checklist.md](docs/acceptance-checklist.md),隐私与试点门禁见 [docs/privacy-and-pilot-gates.md](docs/privacy-and-pilot-gates.md)。
 
 ## 技术栈
 
@@ -56,8 +56,8 @@ npm run dev        # 默认调 http://127.0.0.1:8000,可用 VITE_API_BASE 覆盖
 ### 测试与构建
 
 ```bash
-cd backend  && .venv/Scripts/python.exe -m pytest tests/ -q   # 69 passed
-cd frontend && npm run test                                    # vitest,36 passed
+cd backend  && .venv/Scripts/python.exe -m pytest tests/ -q   # 122 passed (Python 3.14 local; CI also runs 3.12)
+cd frontend && npm run test                                    # vitest,48 passed
 cd frontend && npm run build                                   # vue-tsc 类型检查 + vite 构建
 ```
 

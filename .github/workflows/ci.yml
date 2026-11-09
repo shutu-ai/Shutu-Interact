@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.12 keeps annotation evaluation strict: the B-01 regression
+        # (undefined name in an annotation) must fail here, not hide
+        # behind Python 3.14's lazy annotations.
+        python-version: ["3.12"]
+    env:
+      ENGINE_PROVIDER: mock
+      ASR_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest tests/ -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npx vitest run --reporter=basic
+      - name: Type-check and build
+        working-directory: frontend
+        run: npm run build
