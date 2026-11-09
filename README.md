@@ -77,8 +77,8 @@ cd frontend && npm run build                                   # vue-tsc 类型�
 | 能力 | 当前实现 | 替换方式 |
 |------|----------|----------|
 | 对话引擎 | `MockDialogueEngine`(脚本) | 设 `ENGINE_PROVIDER=llm` + `LLM_API_KEY` 等(OpenAI 兼容接口);任何 LLM 失败自动回退脚本引擎(§8.3) |
-| 语音识别 ASR | `MockSpeechRecognizer`(固定返回) | 实现 `SpeechRecognizer` 协议,在 `container.py` 换装配;路由 `/api/sessions/{id}/speech` 不变 |
-| 语音合成 TTS | 默认浏览器 `speechSynthesis`(en-US, rate 0.9) | 云 TTS:后端 `POST /api/tts` 已是替换点(mock 返回静音 WAV),实现 `SpeechSynthesizer` 并改前端 `frontend/src/services/voice.ts` 的 REPLACEMENT POINT 注释处 |
+| 语音识别 ASR | `ASR_PROVIDER=mock`:`MockSpeechRecognizer`(固定返回)。**真实 ASR 已实现但尚未用真实凭据验证**:`ASR_PROVIDER=openai` 走 OpenAI 兼容 `POST {ASR_API_BASE}/audio/transcriptions`(`backend/app/providers/asr.py` 的 `OpenAICompatibleTranscriber`,离线合同测试覆盖) | 设 `ASR_PROVIDER=openai` + `ASR_API_KEY`/`ASR_API_BASE`/`ASR_MODEL`(不带 key 拒绝启动,绝不静默回退 mock);单文件冒烟:`backend/scripts/asr_smoke.py`(凭据只经环境变量)。路由 `/api/sessions/{id}/speech` 不变 |
+| 语音合成 TTS | 浏览器 `speechSynthesis`(en-US, rate 0.9)——**过渡方案**:kiosk Chrome/Edge 内置,无需凭据,音质/音色不可控 | 云 TTS:后端 `POST /api/tts` 已是替换点(mock 返回静音 WAV),实现 `SpeechSynthesizer` 并改前端 `frontend/src/services/voice.ts` 的 REPLACEMENT POINT 注释处 |
 | 提示词 | `app/providers/prompts.py` | 年龄分层、主题锁定、安全规则、漂移恢复均在此文件调整 |
 
 ## 延迟优化建议(方案 §8 Phase 4)
@@ -94,6 +94,7 @@ cd frontend && npm run build                                   # vue-tsc 类型�
 4. **麦克风权限**:浏览器 `getUserMedia` 只在安全上下文可用——平板 kiosk 必须走 `https://`(或用 `localhost` 调试);建议配内网证书 + 域名。
 5. **全屏**:页面右上角 `⛶ 全屏` 按钮进入全屏;浏览器开自启 + 指定首页即可作为 kiosk 常驻。
 6. **LLM 模式**:`.env` 设 `ENGINE_PROVIDER=llm` 与 `LLM_API_KEY`(见 `backend/.env.example`);不带 key 启动 llm 模式会直接报错退出(mock 模式无此要求)。
+7. **真实 ASR 模式**:同上设 `ASR_PROVIDER=openai` 与 `ASR_API_KEY` 等方可启动;验收前用 `backend/scripts/asr_smoke.py` 以成人英文音频(如 "I like cats.")做单文件冒烟。生产/试点禁止 `ENGINE_PROVIDER=mock` 或 `ASR_PROVIDER=mock`。
 
 ## 合规注意(方案 §7)
 
