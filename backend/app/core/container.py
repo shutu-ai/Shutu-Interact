@@ -3,6 +3,9 @@
 REPLACEMENT POINT: build_container chooses implementations from settings —
 routes depend only on the protocols. Engine selection: ENGINE_PROVIDER=mock
 (scripted, default) or llm (OpenAI-compatible endpoint via LLM_* settings).
+
+The scripted mock always stays wired as fallback_engine (spec §8.3): any
+LLM failure or guard trip swaps in a safe scripted turn.
 """
 
 from dataclasses import dataclass
@@ -14,15 +17,20 @@ from app.providers.chat import OpenAIChatClient
 from app.providers.llm_dialogue import LLMDialogueEngine
 from app.providers.mock_dialogue import MockDialogueEngine
 from app.providers.tts import MockSpeechSynthesizer, SpeechSynthesizer
+from app.services.safety_guard import SafetyGuard
 from app.services.session_manager import SessionManager
 
 
-@dataclass(frozen=True)
+@dataclass
 class Container:
+    """Wiring holder, deliberately mutable so tests can swap providers."""
+
     engine: DialogueEngine
     manager: SessionManager
     asr: SpeechRecognizer
     tts: SpeechSynthesizer
+    guard: SafetyGuard
+    fallback_engine: DialogueEngine
 
 
 def build_container(settings: Settings) -> Container:
@@ -48,9 +56,11 @@ def build_container(settings: Settings) -> Container:
 
     return Container(
         engine=engine,
-        manager=SessionManager(),
+        manager=SessionManager(ttl_seconds=settings.session_ttl_seconds),
         asr=MockSpeechRecognizer(),
         tts=MockSpeechSynthesizer(),
+        guard=SafetyGuard(),
+        fallback_engine=MockDialogueEngine(),
     )
 
 

@@ -1,6 +1,7 @@
 """Domain constants and immutable dialogue models."""
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from typing import Tuple
 
 AGE_GROUPS: Tuple[str, ...] = ("4-6", "7-9", "10-12")
@@ -31,6 +32,7 @@ class Session:
     topic: str
     turns: Tuple[Turn, ...] = ()
     child_texts: Tuple[str, ...] = ()
+    created_at: float = field(default_factory=time.time)
 
     @property
     def last(self) -> Turn | None:
