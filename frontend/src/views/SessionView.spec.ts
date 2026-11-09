@@ -31,6 +31,7 @@ vi.mock("../services/api", () => ({
 vi.mock("../services/voice", () => ({
   startListening: vi.fn(),
   speak: vi.fn(),
+  stopSpeaking: vi.fn(),
 }));
 
 function mountView() {

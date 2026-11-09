@@ -27,8 +27,10 @@ _ASR_FAILED = err(
 
 
 @router.post("/api/sessions/{session_id}/speech")
-async def speech(session_id: str, audio: UploadFile) -> Any:
-    raw = await audio.read()
+def speech(session_id: str, audio: UploadFile) -> Any:
+    # Sync handler: FastAPI runs it in the threadpool, so the blocking ASR
+    # call never stalls the event loop for concurrent kiosk requests.
+    raw = audio.file.read()
     content_type = audio.content_type or "application/octet-stream"
 
     try:

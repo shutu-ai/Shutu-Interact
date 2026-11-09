@@ -24,18 +24,32 @@ vi.mock("../services/api", () => ({
 vi.mock("../services/voice", () => ({
   startListening: vi.fn(),
   speak: vi.fn(),
+  stopSpeaking: vi.fn(),
 }));
 
 const mocked = vi.mocked(api);
 const mockedVoice = vi.mocked(voice);
 
 function mockRecording(): void {
-  mockedVoice.startListening.mockResolvedValue({
+  // Each beginVoice yields a FRESH handle + blob, like a real recorder.
+  mockedVoice.startListening.mockImplementation(async () => ({
     stop: vi
       .fn()
-      .mockResolvedValue({ blob: new Blob(["x"]), mimeType: "audio/webm" }),
+      .mockResolvedValue({
+        blob: new Blob([Math.random().toString()]),
+        mimeType: "audio/webm",
+      }),
     cancel: vi.fn(),
-  });
+  }));
+}
+
+/** Half-duplex: the mic only opens after Coco finished speaking. */
+function cocoFinishedSpeaking(): void {
+  const call = mockedVoice.speak.mock.calls.at(-1);
+  expect(call, "speak should have been called").toBeDefined();
+  const onEnded = call![1] as (() => void) | undefined;
+  expect(onEnded, "speak should receive an onEnded callback").toBeDefined();
+  onEnded!();
 }
 
 const greetingData = {
@@ -152,6 +166,7 @@ describe("session store", () => {
       finished: false,
     });
 
+    cocoFinishedSpeaking(); // greeting playback done → mic may open
     await store.beginVoice();
     expect(store.recording).toBe(true);
 
@@ -166,12 +181,13 @@ describe("session store", () => {
     expect(store.characterState).toBe("listening");
     expect(mockedVoice.speak).toHaveBeenCalledWith(
       "Great job! Do you have a pet?",
+      expect.any(Function),
     );
     expect(store.recording).toBe(false);
     expect(store.busy).toBe(false);
   });
 
-  it("retries ASR once with the same recording before failing", async () => {
+  it("on ASR failure uploads once and asks for a NEW recording (never resends)", async () => {
     mocked.createSession.mockResolvedValue(greetingData);
     const store = useSessionStore();
     store.chooseAge("7-9");
@@ -182,19 +198,22 @@ describe("session store", () => {
       "asr_failed",
       "Speech recognition failed.",
     );
-    mocked.sendSpeech
-      .mockRejectedValueOnce(asrError)
-      .mockRejectedValueOnce(asrError);
+    // A single rejection: if the store re-sent the same blob, the mock's
+    // next queued value would succeed and mask the violation.
+    mocked.sendSpeech.mockRejectedValueOnce(asrError);
 
+    cocoFinishedSpeaking();
     await store.beginVoice();
     await store.finishVoice();
 
-    expect(mocked.sendSpeech).toHaveBeenCalledTimes(2);
+    expect(mocked.sendSpeech).toHaveBeenCalledTimes(1);
     expect(store.error).not.toBeNull();
+    expect(store.voiceState).toBe("idle");
+    expect(store.canRecord).toBe(true); // a NEW recording is invited
     expect(store.busy).toBe(false);
   });
 
-  it("recovers when the ASR retry succeeds", async () => {
+  it("the re-record is a NEW recording and recovers the flow", async () => {
     mocked.createSession.mockResolvedValue(greetingData);
     const store = useSessionStore();
     store.chooseAge("7-9");
@@ -215,10 +234,16 @@ describe("session store", () => {
         finished: false,
       });
 
+    cocoFinishedSpeaking();
     await store.beginVoice();
-    await store.finishVoice();
+    await store.finishVoice(); // failure #1
+    const firstBlob = mocked.sendSpeech.mock.calls[0][1];
+
+    await store.beginVoice();
+    await store.finishVoice(); // the child records again — NEW audio
 
     expect(mocked.sendSpeech).toHaveBeenCalledTimes(2);
+    expect(mocked.sendSpeech.mock.calls[1][1]).not.toBe(firstBlob);
     expect(store.turn).toBe(1);
     expect(store.error).toBeNull();
     expect(mockedVoice.speak).toHaveBeenCalled();
@@ -234,6 +259,7 @@ describe("session store", () => {
       new Error("NotAllowedError"),
     );
 
+    cocoFinishedSpeaking();
     await store.beginVoice();
 
     expect(store.recording).toBe(false);

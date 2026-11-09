@@ -59,10 +59,11 @@ def test_reply_finishes_after_max_turns(client):
     assert last["finished"] is True
     assert last["state"] == "praise"
 
-    after = client.post(
-        f"/api/sessions/{sid}/replies", json={"text": "hello"}
-    ).json()["data"]
-    assert after["finished"] is True
+    # G2 (MVP closure): natural finish auto-ends the server session —
+    # context is deleted immediately, a follow-up turn gets 404.
+    after = client.post(f"/api/sessions/{sid}/replies", json={"text": "hello"})
+    assert after.status_code == 404
+    assert after.json()["error"]["code"] == "session_not_found"
 
 
 def test_reply_unknown_session_404(client):

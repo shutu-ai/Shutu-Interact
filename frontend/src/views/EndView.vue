@@ -20,6 +20,17 @@ async function home(): Promise<void> {
   <section class="page">
     <CocoCharacter state="thumbsup" />
     <h1 class="title">You did a great job! 你真棒!</h1>
+    <p v-if="store.endReason === 'timeout' || store.endReason === 'idle'" class="timeup">
+      Time for a little break! 休息一下,下次再玩!
+    </p>
     <PrimaryButton @click="home">再来一次 · Back to Home</PrimaryButton>
   </section>
 </template>
+
+<style scoped>
+.timeup {
+  font-size: 1.1rem;
+  color: #8a7a5c;
+  margin: 0;
+}
+</style>

@@ -3,8 +3,10 @@ import { useRouter } from "vue-router";
 
 import CocoCharacter from "../components/CocoCharacter.vue";
 import PrimaryButton from "../components/PrimaryButton.vue";
+import { useSessionStore } from "../stores/session";
 
 const router = useRouter();
+const store = useSessionStore();
 
 function start(): void {
   router.push("/age");
@@ -16,6 +18,7 @@ function start(): void {
     <CocoCharacter state="idle" />
     <h1 class="title">Coco English</h1>
     <p class="subtitle">你好!我是 Coco,AI 英语互动小伙伴,一起说英语吧!</p>
+    <p v-if="store.error" class="error" role="alert">{{ store.error }}</p>
     <p class="privacy-note">
       本互动为匿名体验,不收集任何个人信息 · Anonymous — no personal
       information is collected.
@@ -31,5 +34,12 @@ function start(): void {
   text-align: center;
   margin: 0;
   max-width: 560px;
+}
+
+.error {
+  font-size: 1rem;
+  color: #b3323a;
+  text-align: center;
+  margin: 0;
 }
 </style>

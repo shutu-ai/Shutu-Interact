@@ -45,13 +45,31 @@ export async function startListening(): Promise<RecordingHandle> {
   };
 }
 
-export function speak(text: string): void {
+export function speak(text: string, onEnded?: () => void): void {
   if (!("speechSynthesis" in window)) {
+    // No synthesis available (tests, exotic browsers): nothing plays, so
+    // the caller must not wait forever — report "finished" immediately.
+    onEnded?.();
     return;
   }
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
   utterance.rate = 0.9;
+  const done = () => {
+    utterance.onend = null;
+    utterance.onerror = null;
+    onEnded?.();
+  };
+  utterance.onend = done;
+  utterance.onerror = done;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
+}
+
+/** Half-duplex teardown: cut any playing reply immediately (exit, safety
+ * timeout, reset). Safe to call when nothing is playing. */
+export function stopSpeaking(): void {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }

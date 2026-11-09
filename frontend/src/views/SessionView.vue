@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import CocoCharacter from "../components/CocoCharacter.vue";
@@ -10,11 +10,12 @@ const router = useRouter();
 const store = useSessionStore();
 const draft = ref("");
 
-// Voice is the primary channel (半双工: tap → talk → tap → reply plays).
+// Voice is the primary channel (严格半双工: speak → listen → reply plays;
+// the mic only opens while Coco is idle — never while she speaks).
 async function toggleMic(): Promise<void> {
   if (store.recording) {
     await store.finishVoice();
-  } else {
+  } else if (store.canRecord) {
     await store.beginVoice();
   }
 }
@@ -29,11 +30,40 @@ function exit(): void {
   void store.endSession().then(() => router.replace("/"));
 }
 
+// Leaving the page (kiosk reload/close) must stop every voice channel.
+function handleBeforeUnload(): void {
+  store.stopVoiceIO();
+}
+
+onMounted(() => {
+  window.addEventListener("beforeunload", handleBeforeUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+});
+
+const hint = computed(() => {
+  if (store.busy || store.voiceState === "processing") {
+    return "Coco is thinking… Coco 想一想…";
+  }
+  if (store.recording || store.voiceState === "listening") {
+    return "I'm listening… 我在听,请说英语";
+  }
+  if (store.voiceState === "speaking") {
+    return "Coco is talking… Coco 在说话,请听";
+  }
+  return "Tap the mic and answer in English · 点麦克风用英语回答";
+});
+
 watch(
   () => store.phase,
   (phase) => {
     if (phase === "end") {
       router.replace("/end");
+    } else if (phase === "welcome") {
+      // A lost session (404) reset the flow — go home for a fresh start.
+      router.replace("/");
     }
   },
 );
@@ -52,19 +82,13 @@ watch(
       type="button"
       class="mic-button"
       :class="{ recording: store.recording }"
-      :disabled="store.busy"
+      :disabled="!store.canRecord"
       @click="toggleMic"
     >
       {{ store.recording ? "⏹ 停止 Stop" : "🎤 说话 Talk!" }}
     </button>
     <p class="hint" :class="{ listening: store.recording }">
-      {{
-        store.busy
-          ? "Coco is thinking… Coco 想一想…"
-          : store.recording
-            ? "I'm listening… 我在听,请说英语"
-            : "Tap the mic and answer in English · 点麦克风用英语回答"
-      }}
+      {{ hint }}
     </p>
     <form class="mock-input" @submit.prevent="send">
       <input

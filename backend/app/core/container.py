@@ -79,7 +79,10 @@ def build_container(settings: Settings) -> Container:
 
     return Container(
         engine=engine,
-        manager=SessionManager(ttl_seconds=settings.session_ttl_seconds),
+        manager=SessionManager(
+            ttl_seconds=settings.session_ttl_seconds,
+            max_duration_seconds=settings.session_max_seconds,
+        ),
         asr=asr,
         tts=MockSpeechSynthesizer(),
         guard=SafetyGuard(),
