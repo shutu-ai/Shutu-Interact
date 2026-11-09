@@ -12,3 +12,10 @@ export const SESSION_MAX_MS = toMs(import.meta.env.VITE_SESSION_MAX_MS, 180_000)
 
 /** How long Coco waits for the child before gently wrapping up. */
 export const IDLE_TIMEOUT_MS = toMs(import.meta.env.VITE_SESSION_IDLE_MS, 60_000);
+
+/** Max time the farewell may play after a natural finish before the flow
+ * returns home anyway (closure G2: play until complete OR timeout). */
+export const FAREWELL_TIMEOUT_MS = toMs(
+  import.meta.env.VITE_FAREWELL_TIMEOUT_MS,
+  15_000,
+);

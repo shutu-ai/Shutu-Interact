@@ -146,6 +146,22 @@ describe("half-duplex voice loop", () => {
     expect(mockedVoice.stopSpeaking).toHaveBeenCalled();
     expect(store.recording).toBe(false);
   });
+
+  it("keeps the mic tappable while recording so the child can stop", async () => {
+    const store = await startSession();
+    cocoFinishedSpeaking();
+    mocked.sendSpeech.mockResolvedValue(listeningTurn(1));
+
+    await store.beginVoice();
+
+    expect(store.recording).toBe(true);
+    // Review finding: the ⏹ Stop button must stay reachable mid-recording.
+    expect(store.canRecord).toBe(true);
+
+    await store.finishVoice();
+
+    expect(mocked.sendSpeech).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("natural finish", () => {
@@ -164,6 +180,34 @@ describe("natural finish", () => {
     expect(store.phase).toBe("end");
     expect(store.finished).toBe(true);
     expect(store.endReason).toBe("finished");
+  });
+
+  it("plays the farewell and returns home only after playback completes", async () => {
+    const store = await startSession();
+    cocoFinishedSpeaking(); // greeting finished
+
+    mocked.reply.mockResolvedValueOnce({
+      assistantText: "Bye-bye! See you next time!",
+      state: "praise",
+      turn: 4,
+      finished: true,
+    });
+    await store.sendChildText("bye");
+
+    expect(store.phase).toBe("end");
+    expect(mocked.endSession).toHaveBeenCalledWith("sid-1");
+    // Closure G2: the farewell line is kept — spoken until playback ends.
+    expect(mockedVoice.speak).toHaveBeenLastCalledWith(
+      "Bye-bye! See you next time!",
+      expect.any(Function),
+    );
+
+    cocoFinishedSpeaking(); // farewell playback completes
+
+    // Only now the flow returns to the welcome page.
+    expect(store.phase).toBe("welcome");
+    expect(store.assistantText).toBe("");
+    expect(store.sessionId).toBeNull();
   });
 });
 
@@ -250,6 +294,25 @@ describe("session caps (fake timers)", () => {
 
     vi.advanceTimersByTime(IDLE_TIMEOUT_MS - 1_000);
     expect(store.phase).toBe("session");
+  });
+
+  it("farewell playback timeout still returns home if synthesis hangs", async () => {
+    vi.useFakeTimers();
+    const store = await startSession();
+    cocoFinishedSpeaking();
+
+    mocked.reply.mockResolvedValueOnce({
+      assistantText: "Bye-bye!",
+      state: "praise",
+      turn: 4,
+      finished: true,
+    });
+    await store.sendChildText("bye");
+    expect(store.phase).toBe("end"); // farewell playing
+
+    vi.advanceTimersByTime(15_000); // synthesis never completes
+
+    expect(store.phase).toBe("welcome");
   });
 });
 

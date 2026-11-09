@@ -57,4 +57,22 @@ describe("EndView", () => {
     expect(useRouter().replace).toHaveBeenCalledWith("/");
     expect(store.sessionId).toBeNull();
   });
+
+  it("natural finish: shows the farewell and routes home when it completes", async () => {
+    const store = useSessionStore();
+    store.phase = "end";
+    store.finished = true;
+    store.endReason = "finished";
+    store.assistantText = "Bye-bye! See you next time!";
+    const wrapper = mount(EndView);
+
+    // Closure G2: the farewell line stays visible while it plays.
+    expect(wrapper.text()).toContain("Bye-bye! See you next time!");
+
+    // finishFarewell() → reset() flips the phase once playback ends.
+    store.phase = "welcome";
+    await flushPromises();
+
+    expect(useRouter().replace).toHaveBeenCalledWith("/");
+  });
 });

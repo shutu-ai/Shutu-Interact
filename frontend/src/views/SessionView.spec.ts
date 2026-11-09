@@ -96,4 +96,36 @@ describe("SessionView", () => {
 
     expect(useRouter().replace).not.toHaveBeenCalled();
   });
+
+  it("mic button toggles recording: tap to start, tap again to stop", async () => {
+    const store = seedSession();
+    const wrapper = mountView();
+
+    const { startListening, speak } = await import("../services/voice");
+    vi.mocked(startListening).mockResolvedValue({
+      stop: vi
+        .fn()
+        .mockResolvedValue({ blob: new Blob(["x"]), mimeType: "audio/webm" }),
+      cancel: vi.fn(),
+    });
+    const { sendSpeech } = await import("../services/api");
+    vi.mocked(sendSpeech).mockResolvedValue({
+      assistantText: "Nice talking!",
+      state: "praise",
+      turn: 3,
+      finished: false,
+    });
+
+    await wrapper.find(".mic-button").trigger("click");
+    expect(store.recording).toBe(true);
+    // Review finding: the ⏹ Stop label must stay reachable mid-recording —
+    // the button may not disable itself the moment recording starts.
+    expect(wrapper.find(".mic-button").attributes("disabled")).toBeUndefined();
+
+    await wrapper.find(".mic-button").trigger("click");
+    await flushPromises();
+
+    expect(sendSpeech).toHaveBeenCalledTimes(1);
+    expect(speak).toHaveBeenCalled(); // Coco announces the reply
+  });
 });

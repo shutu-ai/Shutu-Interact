@@ -3,10 +3,13 @@
  * G2 (MVP closure) guarantees:
  * - explicit voiceState machine: idle → listening → processing → speaking
  *   (→ idle) with "error" as a parked state — strict half-duplex, the mic
- *   only opens while idle and never while Coco speaks;
+ *   only opens while idle and never while Coco speaks; it stays tappable
+ *   while listening so the child can tap ⏹ to stop;
  * - an epoch counter guards every async turn: a response resolving after
  *   exit/reset can never touch the fresh state;
- * - a natural finish auto-ends the server session (no click needed);
+ * - a natural finish auto-ends the server session (no click needed) and
+ *   speaks the farewell line until it completes or times out — only then
+ *   the flow returns to the welcome page;
  * - total session cap (~180s) and idle timeout gently auto-end the session;
  * - ASR failure never resends the original recording — the child records
  *   NEW audio, at most one re-record per turn;
@@ -16,7 +19,7 @@
 import { defineStore } from "pinia";
 
 import * as api from "../services/api";
-import { IDLE_TIMEOUT_MS, SESSION_MAX_MS } from "../config";
+import { FAREWELL_TIMEOUT_MS, IDLE_TIMEOUT_MS, SESSION_MAX_MS } from "../config";
 import { characterStateFor, type CharacterState } from "../services/character";
 import {
   speak,
@@ -76,6 +79,7 @@ let activeRecording: RecordingHandle | null = null;
 let flowEpoch = 0;
 let totalTimer: ReturnType<typeof setTimeout> | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let farewellTimer: ReturnType<typeof setTimeout> | null = null;
 
 const ASR_RE_RECORD_BUDGET = 1;
 const ASR_RETRY_HINT =
@@ -98,14 +102,16 @@ export const useSessionStore = defineStore("session", {
   state: (): SessionFlowState => ({ ...initialState }),
 
   getters: {
-    /** The mic may open only in the idle state of a live session. After
-     * the ASR re-record budget is exhausted the state parks at "error",
-     * which keeps this false until a turn succeeds. */
+    /** The mic may open only in the idle state of a live session — never
+     * while Coco speaks or thinks (half-duplex). It stays tappable while
+     * "listening" so the ⏹ Stop button is reachable. After the ASR
+     * re-record budget is exhausted the state parks at "error", which
+     * keeps this false until a turn succeeds. */
     canRecord(state): boolean {
       return (
         state.phase === "session" &&
         state.sessionId !== null &&
-        state.voiceState === "idle" &&
+        (state.voiceState === "idle" || state.voiceState === "listening") &&
         !state.busy
       );
     },
@@ -377,6 +383,7 @@ export const useSessionStore = defineStore("session", {
     clearTimers(): void {
       this.clearIdleTimer();
       this.clearTotalTimer();
+      this.clearFarewellTimer();
     },
 
     applyTurnData(data: TurnData): void {
@@ -387,7 +394,7 @@ export const useSessionStore = defineStore("session", {
       this.asrReRecordsLeft = ASR_RE_RECORD_BUDGET;
       if (data.finished) {
         this.endReason = "finished";
-        this.voiceState = "idle";
+        this.voiceState = "speaking";
         this.phase = "end";
         this.clearTimers();
         this.stopVoiceIO();
@@ -397,6 +404,32 @@ export const useSessionStore = defineStore("session", {
         if (this.sessionId) {
           void Promise.resolve(api.endSession(this.sessionId)).catch(() => {});
         }
+        // Keep the farewell until playback completes or times out — only
+        // then return to the welcome page (closure G2).
+        this.playFarewell();
+      }
+    },
+
+    /** Speak the final line on the end screen; the flow goes home when
+     * playback completes or FAREWELL_TIMEOUT_MS elapses, whichever first. */
+    playFarewell(): void {
+      const epoch = flowEpoch;
+      farewellTimer = setTimeout(() => this.finishFarewell(epoch), FAREWELL_TIMEOUT_MS);
+      speak(this.assistantText, () => this.finishFarewell(epoch));
+    },
+
+    finishFarewell(epoch: number): void {
+      this.clearFarewellTimer();
+      if (epoch !== flowEpoch) {
+        return; // the operator exited mid-farewell: nothing to wrap up
+      }
+      this.reset(); // phase → welcome; EndView routes home on the watch
+    },
+
+    clearFarewellTimer(): void {
+      if (farewellTimer !== null) {
+        clearTimeout(farewellTimer);
+        farewellTimer = null;
       }
     },
   },
