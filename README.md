@@ -20,7 +20,7 @@ backend/
     schemas/             # 请求校验 + 统一响应 envelope
     services/            # SessionManager(TTL 清理)、SafetyGuard(内容防护)
     main.py              # FastAPI 入口(CORS、统一错误 envelope)
-  tests/                 # 63 个后端测试
+  tests/                 # 69 个后端测试
 frontend/
   src/
     components/          # CocoCharacter / PrimaryButton / FullscreenToggle
@@ -56,8 +56,8 @@ npm run dev        # 默认调 http://127.0.0.1:8000,可用 VITE_API_BASE 覆盖
 ### 测试与构建
 
 ```bash
-cd backend  && .venv/Scripts/python.exe -m pytest tests/ -q   # 63 passed
-cd frontend && npm run test                                    # vitest,34 passed
+cd backend  && .venv/Scripts/python.exe -m pytest tests/ -q   # 69 passed
+cd frontend && npm run test                                    # vitest,36 passed
 cd frontend && npm run build                                   # vue-tsc 类型检查 + vite 构建
 ```
 

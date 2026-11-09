@@ -1,5 +1,6 @@
 # Scratch / workspace
 .superpowers/
+.codegraph/
 
 # Python
 __pycache__/

@@ -16,7 +16,7 @@ from app.models.dialogue import (
     Turn,
 )
 
-_PRAISES: Tuple[str, ...] = (
+_PRAISES: tuple[str, ...] = (
     "Great job!",
     "Well done!",
     "Awesome!",
@@ -36,7 +36,7 @@ _TOPIC_INTROS: Mapping[str, str] = {
 }
 
 # Per topic -> per age group -> exactly MAX_TURNS questions.
-_QUESTIONS: Mapping[str, Mapping[str, Tuple[str, ...]]] = {
+_QUESTIONS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
     "animals": {
         "4-6": (
             "Do you like dogs?",
