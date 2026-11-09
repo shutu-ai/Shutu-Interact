@@ -159,7 +159,6 @@ describe("session store", () => {
 
     mockRecording();
     mocked.sendSpeech.mockResolvedValue({
-      transcript: "I like dogs.",
       assistantText: "Great job! Do you have a pet?",
       state: "listening",
       turn: 1,
@@ -227,7 +226,6 @@ describe("session store", () => {
     mocked.sendSpeech
       .mockRejectedValueOnce(asrError)
       .mockResolvedValueOnce({
-        transcript: "I like dogs.",
         assistantText: "Awesome! What animal do you think is funny?",
         state: "listening",
         turn: 1,

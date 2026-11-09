@@ -134,7 +134,7 @@ def test_speech_replaces_unsafe_engine_output(
 
     assert res.status_code == 200
     data = res.json()["data"]
-    assert data["transcript"] == "I like dogs."
+    assert "transcript" not in data  # G3: no child-text echo
     expected = MockDialogueEngine().respond(snapshot, "I like dogs.")
     assert data["assistant_text"] == expected.assistant_text
 
@@ -156,7 +156,7 @@ def test_speech_redirects_unsafe_transcript(
 
     assert res.status_code == 200
     data = res.json()["data"]
-    assert data["transcript"] == "i have a gun"
+    assert "transcript" not in data  # G3: flagged child text is never echoed
     assert engine.calls == 0
     expected = MockDialogueEngine().respond(snapshot, "i have a gun")
     assert data["assistant_text"] == expected.assistant_text

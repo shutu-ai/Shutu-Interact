@@ -12,6 +12,15 @@ def test_prompt_contains_role_topic_and_dialogue_rules():
     assert "English" in prompt
 
 
+def test_prompt_identity_is_a_robot_not_an_animal_mascot():
+    """B-10 (MVP closure): the mascot art is a blue-and-orange robot; the
+    prompt must not call Coco a camel (or any other animal species)."""
+    prompt = build_system_prompt("7-9", "animals", 4).lower()
+
+    assert "robot" in prompt
+    assert "camel" not in prompt
+
+
 def test_prompt_varies_by_age_group():
     prompts = {
         group: build_system_prompt(group, "sports", 4)

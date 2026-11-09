@@ -73,16 +73,16 @@ const endDataSchema = z
   .object({ ended: z.boolean() })
   .transform((raw) => ({ ended: raw.ended }));
 
+// G3 (MVP closure): the child transcript is deliberately absent — the
+// backend never echoes it back; the kiosk only needs the reply line.
 const speechDataSchema = z
   .object({
-    transcript: z.string(),
     assistant_text: z.string(),
     state: z.enum(["greeting", "listening", "praise"]),
     turn: z.number().int(),
     finished: z.boolean(),
   })
   .transform((raw) => ({
-    transcript: raw.transcript,
     assistantText: raw.assistant_text,
     state: raw.state,
     turn: raw.turn,

@@ -21,6 +21,7 @@ from app.providers.chat import OpenAIChatClient
 from app.providers.llm_dialogue import LLMDialogueEngine
 from app.providers.mock_dialogue import MockDialogueEngine
 from app.providers.tts import MockSpeechSynthesizer, SpeechSynthesizer
+from app.services.rate_limiter import SlidingWindowRateLimiter
 from app.services.safety_guard import SafetyGuard
 from app.services.session_manager import SessionManager
 
@@ -35,6 +36,8 @@ class Container:
     tts: SpeechSynthesizer
     guard: SafetyGuard
     fallback_engine: DialogueEngine
+    limiter: SlidingWindowRateLimiter
+    max_upload_bytes: int
 
 
 def build_container(settings: Settings) -> Container:
@@ -87,6 +90,10 @@ def build_container(settings: Settings) -> Container:
         tts=MockSpeechSynthesizer(),
         guard=SafetyGuard(),
         fallback_engine=MockDialogueEngine(),
+        limiter=SlidingWindowRateLimiter(
+            max_events=settings.speech_rate_limit_per_minute
+        ),
+        max_upload_bytes=settings.max_upload_bytes,
     )
 
 

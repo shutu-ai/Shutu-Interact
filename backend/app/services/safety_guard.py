@@ -3,8 +3,12 @@
 Output side (assistant text): PII questions, unsafe topics (violence,
 adult, drugs), money / medical / legal advice, secrecy and dependency
 phrasing → blocked.
-Input side (child text): unsafe topics and dependency phrasing →
-blocked. The child asking the AI its own name is harmless and allowed.
+Input side (child text): unsafe topics, dependency phrasing, prompt
+injection, and self-disclosed PII (name / phone / address / school, in
+English and common Chinese phrasings) → blocked. The child asking the
+AI its own name is harmless and allowed. A child asking for help is
+NEVER silenced — help-seeking phrasing matches nothing here; on a
+block the routes answer with a gentle scripted redirect, not silence.
 
 Guard results carry an anonymous reason category only; flagged text is
 never logged or persisted (spec §7.3). Patterns are intentionally
@@ -72,6 +76,38 @@ _DEPENDENCY: tuple[Rule, ...] = _compile((
     (r"\bonly\s+(?:i|me)\s+(?:can|will|am|understand)\b", "dependency"),
 ))
 
+# G3 (MVP closure): a child volunteering their own PII is redacted before
+# the text reaches the engine or the stored history.
+_SELF_DISCLOSURE: tuple[Rule, ...] = _compile((
+    (r"\bmy\s+name\s+is\b", "self_reports_name"),
+    (r"\bi\s+am\s+called\b", "self_reports_name"),
+    (r"\bmy\s+(?:phone|telephone)\s+number\b", "self_reports_phone"),
+    (r"\b1[3-9]\d{9}\b", "self_reports_phone"),  # CN mobile number shape
+    (r"\bi\s+live\s+(?:at|on|in)\b", "self_reports_address"),
+    (r"\bmy\s+address\b", "self_reports_address"),
+    (r"\bmy\s+school\b", "self_reports_school"),
+    (r"\bi\s+go\s+to\s+[\w\s]{0,40}school\b", "self_reports_school"),
+    (r"\bi\s+(?:am\s+at|study\s+at)\s+[\w\s]{0,40}school\b", "self_reports_school"),
+    (r"我叫", "self_reports_name"),
+    (r"我的?(名字|姓名)", "self_reports_name"),
+    (r"我的?电话", "self_reports_phone"),
+    (r"我住在", "self_reports_address"),
+    (r"我的?学校", "self_reports_school"),
+    (r"我在[一-鿿]{1,8}(小学|中学|幼儿园)", "self_reports_school"),
+))
+
+_INJECTION: tuple[Rule, ...] = _compile((
+    (
+        r"\bignore\s+(?:all\s+|any\s+)?(?:previous|prior|above|your|"
+        r"earlier)\s+(?:instructions?|prompts?|rules?)\b",
+        "prompt_injection",
+    ),
+    (r"\bdisregard\s+(?:your|all|the|these)\s+(?:instructions?|rules?)\b", "prompt_injection"),
+    (r"\byou\s+(?:now\s+)?have\s+no\s+rules\b", "prompt_injection"),
+    (r"忽略(之前|上面|所有|你的)?的?(指令|规则|提示)", "prompt_injection"),
+    (r"无视(你的|所有)?的?(规则|指令|设定)", "prompt_injection"),
+))
+
 
 @dataclass(frozen=True)
 class GuardResult:
@@ -97,4 +133,6 @@ class SafetyGuard:
 
     def check_input(self, text: str) -> GuardResult:
         """Screen child text before it reaches the engine or history."""
-        return _first_match(text, _UNSAFE + _DEPENDENCY)
+        return _first_match(
+            text, _UNSAFE + _INJECTION + _SELF_DISCLOSURE + _DEPENDENCY
+        )

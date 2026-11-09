@@ -20,6 +20,9 @@ class Settings:
     asr_api_key: str = ""
     asr_model: str = "whisper-1"
     asr_timeout_seconds: float = 10.0
+    # G3: speech upload bound and per-session turn rate limit.
+    max_upload_bytes: int = 5_000_000
+    speech_rate_limit_per_minute: int = 12
     # Comma-separated origins the kiosk frontend may call from ("*" for the
     # LAN MVP); tighten in production (e.g. "https://kiosk.example.com").
     cors_allow_origins: tuple[str, ...] = ("*",)
@@ -52,6 +55,10 @@ def load_settings() -> Settings:
         asr_api_key=os.getenv("ASR_API_KEY", ""),
         asr_model=os.getenv("ASR_MODEL", "whisper-1"),
         asr_timeout_seconds=float(os.getenv("ASR_TIMEOUT_SECONDS", "10.0")),
+        max_upload_bytes=int(os.getenv("MAX_UPLOAD_BYTES", "5000000")),
+        speech_rate_limit_per_minute=int(
+            os.getenv("SPEECH_RATE_LIMIT_PER_MINUTE", "12")
+        ),
         cors_allow_origins=_parse_origins(
             os.getenv("CORS_ALLOW_ORIGINS", "*")
         ),

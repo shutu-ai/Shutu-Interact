@@ -29,6 +29,9 @@ router = APIRouter()
 _SESSION_NOT_FOUND = err(
     "session_not_found", "Session not found or already ended."
 )
+_RATE_LIMITED = err(
+    "rate_limited", "Too many turns too quickly. Please wait a moment."
+)
 
 
 @router.post("/api/sessions")
@@ -52,6 +55,9 @@ def create_session(payload: CreateSessionRequest) -> dict[str, Any]:
 
 @router.post("/api/sessions/{session_id}/replies")
 def reply(session_id: str, payload: ReplyRequest) -> Any:
+    if not container.limiter.allow(session_id):
+        return JSONResponse(status_code=429, content=_RATE_LIMITED)
+
     try:
         session = container.manager.get(session_id)
     except SessionNotFoundError:

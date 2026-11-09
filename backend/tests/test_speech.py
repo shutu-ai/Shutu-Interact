@@ -15,14 +15,16 @@ def _create_session(client) -> str:
     return res.json()["data"]["session_id"]
 
 
-def test_speech_returns_transcript_and_next_turn(client):
+def test_speech_returns_next_turn_without_echoing_transcript(client):
+    """G3 (MVP closure): the child transcript is never returned to the
+    client — data minimization; the reply line is all the kiosk needs."""
     sid = _create_session(client)
 
     res = client.post(f"/api/sessions/{sid}/speech", files=UPLOAD)
 
     assert res.status_code == 200
     data = res.json()["data"]
-    assert data["transcript"] == "I like dogs."
+    assert "transcript" not in data
     assert data["turn"] == 1
     assert data["finished"] is False
     assert data["assistant_text"]
@@ -77,6 +79,50 @@ def test_speech_route_runs_in_threadpool():
     )
 
     assert not inspect.iscoroutinefunction(endpoint)
+
+
+# --- G3: bounded speech upload + rate limiting ----------------------------
+
+
+def test_speech_rejects_oversized_audio(client):
+    sid = _create_session(client)
+
+    res = client.post(
+        f"/api/sessions/{sid}/speech",
+        files={"audio": ("big.webm", b"x" * (5_000_001), "audio/webm")},
+    )
+
+    assert res.status_code == 413
+    assert res.json()["error"]["code"] == "audio_too_large"
+
+
+def test_speech_rejects_non_audio_content_type(client):
+    sid = _create_session(client)
+
+    res = client.post(
+        f"/api/sessions/{sid}/speech",
+        files={"audio": ("note.txt", b"just text", "text/plain")},
+    )
+
+    assert res.status_code == 415
+    assert res.json()["error"]["code"] == "unsupported_audio"
+
+
+def test_turns_are_rate_limited_per_session(client):
+    """G3: runaway clients (or scripts) cannot spam the voice loop; the
+    limit counts even failed/404 turns so it cannot be bypassed."""
+    sid = _create_session(client)
+    last = None
+    for _ in range(12):
+        last = client.post(
+            f"/api/sessions/{sid}/replies", json={"text": "hello"}
+        )
+        assert last.status_code in (200, 404)
+
+    res = client.post(f"/api/sessions/{sid}/replies", json={"text": "hello"})
+
+    assert res.status_code == 429
+    assert res.json()["error"]["code"] == "rate_limited"
 
 
 def test_natural_finish_ends_server_session(client):

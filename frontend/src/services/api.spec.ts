@@ -111,10 +111,9 @@ describe("api client", () => {
     await expect(endSession("abc123")).resolves.toEqual({ ended: true });
   });
 
-  it("sendSpeech uploads FormData and returns transcript + turn data", async () => {
+  it("sendSpeech uploads FormData and returns only the turn data (G3: no transcript echo)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       okEnvelope({
-        transcript: "I like dogs.",
         assistant_text: "Great job! Do you have a pet?",
         state: "listening",
         turn: 1,
@@ -136,7 +135,6 @@ describe("api client", () => {
     expect(uploaded).toBeInstanceOf(Blob);
     expect(init.headers).not.toHaveProperty("Content-Type");
     expect(data).toEqual({
-      transcript: "I like dogs.",
       assistantText: "Great job! Do you have a pet?",
       state: "listening",
       turn: 1,

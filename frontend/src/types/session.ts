@@ -23,5 +23,6 @@ export interface EndData {
 }
 
 export interface SpeechData extends TurnData {
-  transcript: string;
+  // G3 (MVP closure): no transcript field — the backend never echoes the
+  // child's speech text back to the client (data minimization).
 }

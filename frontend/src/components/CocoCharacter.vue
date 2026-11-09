@@ -9,7 +9,7 @@ const src = computed(() => assetFor(props.state));
 </script>
 
 <template>
-  <img class="coco-character" :src="src" alt="Coco the camel mascot" />
+  <img class="coco-character" :src="src" alt="Coco the friendly robot mascot" />
 </template>
 
 <style scoped>

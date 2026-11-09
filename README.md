@@ -1,6 +1,6 @@
 # AI English Greeter (Coco English) — MVP
 
-前台 kiosk 应用:在深圳少儿英语培训中心前台,卡通骆驼 Coco 通过语音与到访儿童(4–12 岁)进行 1–3 分钟的受控英语互动。方案见 `01_项目方案_AI_English_Greeter_MVP.md`,任务拆解见 `02_Codex任务提示词_AI_English_Greeter.md`,人工验收清单见 [docs/acceptance-checklist.md](docs/acceptance-checklist.md)。
+前台 kiosk 应用:在深圳少儿英语培训中心前台,卡通机器人 Coco 通过语音与到访儿童(4–12 岁)进行 1–3 分钟的受控英语互动。方案见 `01_项目方案_AI_English_Greeter_MVP.md`,任务拆解见 `02_Codex任务提示词_AI_English_Greeter.md`,人工验收清单见 [docs/acceptance-checklist.md](docs/acceptance-checklist.md)。
 
 ## 技术栈
 
