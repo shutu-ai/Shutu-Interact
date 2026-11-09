@@ -4,15 +4,25 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
+from app.core.config import settings
 from app.schemas.session_schemas import err
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Coco English API")
 app.include_router(api_router)
+
+# The kiosk frontend is served from its own origin (plan §8 Phase 4).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.cors_allow_origins),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(RequestValidationError)
