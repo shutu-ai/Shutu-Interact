@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from app.core.config import Settings, load_settings
 from app.providers.asr import (
     MockSpeechRecognizer,
+    OpenAIChatAudioTranscriber,
     OpenAICompatibleTranscriber,
     SpeechRecognizer,
 )
@@ -54,6 +55,7 @@ def build_container(settings: Settings) -> Container:
             api_key=settings.llm_api_key,
             model=settings.llm_model,
             temperature=settings.llm_temperature,
+            timeout_seconds=settings.llm_timeout_seconds,
         )
         engine = LLMDialogueEngine(chat=chat)
     else:
@@ -75,9 +77,22 @@ def build_container(settings: Settings) -> Container:
             model=settings.asr_model,
             timeout_seconds=settings.asr_timeout_seconds,
         )
+    elif asr_provider == "openai-chat":
+        if not settings.asr_api_key.strip():
+            raise ValueError(
+                "ASR_PROVIDER=openai-chat requires an api key (set ASR_API_KEY); "
+                "ASR_MODEL must name an audio-capable chat model."
+            )
+        asr = OpenAIChatAudioTranscriber(
+            api_base=settings.asr_api_base,
+            api_key=settings.asr_api_key,
+            model=settings.asr_model,
+            timeout_seconds=settings.asr_timeout_seconds,
+        )
     else:
         raise ValueError(
-            f"Unsupported ASR_PROVIDER: {asr_provider!r} (use 'mock' or 'openai')."
+            f"Unsupported ASR_PROVIDER: {asr_provider!r} "
+            "(use 'mock', 'openai' or 'openai-chat')."
         )
 
     return Container(

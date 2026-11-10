@@ -15,6 +15,7 @@ class Settings:
     llm_api_key: str = ""
     llm_model: str = "gpt-4o-mini"
     llm_temperature: float = 0.7
+    llm_timeout_seconds: float = 6.0
     asr_provider: str = "mock"  # "mock" | "openai"
     asr_api_base: str = "https://api.openai.com/v1"
     asr_api_key: str = ""
@@ -50,6 +51,7 @@ def load_settings() -> Settings:
         llm_api_key=os.getenv("LLM_API_KEY", ""),
         llm_model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
         llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0.7")),
+        llm_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "6.0")),
         asr_provider=os.getenv("ASR_PROVIDER", "mock"),
         asr_api_base=os.getenv("ASR_API_BASE", "https://api.openai.com/v1"),
         asr_api_key=os.getenv("ASR_API_KEY", ""),

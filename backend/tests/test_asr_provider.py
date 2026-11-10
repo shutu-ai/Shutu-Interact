@@ -7,14 +7,17 @@ surface (HTTP status, timeout, empty transcript) and wiring rules
 no credentials.
 """
 
+import base64
+
 import httpx
 import pytest
 
 from app.core.config import Settings
 from app.core.container import build_container
-from app.providers.asr import OpenAICompatibleTranscriber
+from app.providers.asr import OpenAIChatAudioTranscriber, OpenAICompatibleTranscriber
 
 _TRANSCRIPTIONS_URL = "https://asr.test/v1/audio/transcriptions"
+_CHAT_COMPLETIONS_URL = "https://asr.test/v1/chat/completions"
 
 
 class _StubResponse:
@@ -135,3 +138,114 @@ def test_container_selects_openai_transcriber() -> None:
 def test_container_rejects_unknown_asr_provider() -> None:
     with pytest.raises(ValueError, match="ASR_PROVIDER"):
         build_container(Settings(asr_provider="azure"))
+
+
+class _StubChatResponse(_StubResponse):
+    """Stub whose default payload mirrors a chat-completions reply."""
+
+    def __init__(self, status_code: int = 200, content: str = "I like dogs.") -> None:
+        super().__init__(
+            status_code=status_code,
+            payload={"choices": [{"message": {"content": content}}]},
+        )
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"error response {self.status_code}",
+                request=httpx.Request("POST", _CHAT_COMPLETIONS_URL),
+                response=httpx.Response(self.status_code),
+            )
+
+
+def _make_chat_transcriber() -> OpenAIChatAudioTranscriber:
+    return OpenAIChatAudioTranscriber(
+        api_base="https://asr.test/v1",
+        api_key="k-test",
+        model="qwen3-omni-flash",
+    )
+
+
+def test_chat_transcriber_posts_data_uri_audio_and_extracts_content(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_post(url: str, **kwargs) -> _StubChatResponse:
+        captured["url"] = url
+        captured.update(kwargs)
+        return _StubChatResponse(content="  I like cats. \n")
+
+    monkeypatch.setattr("app.providers.asr.httpx.post", fake_post)
+    text = _make_chat_transcriber().transcribe(b"RIFF...", "audio/wav")
+
+    assert text == "I like cats."  # whitespace stripped
+    assert captured["url"] == _CHAT_COMPLETIONS_URL
+    assert captured["headers"]["Authorization"] == "Bearer k-test"
+    assert captured["timeout"] == 10.0
+    body = captured["json"]
+    assert body["model"] == "qwen3-omni-flash"
+    assert body["modalities"] == ["text"]  # transcript only, no speech out
+    audio_part, instruction_part = body["messages"][0]["content"]
+    assert audio_part["type"] == "input_audio"
+    assert audio_part["input_audio"]["format"] == "wav"
+    assert audio_part["input_audio"]["data"] == (
+        "data:audio/wav;base64," + base64.b64encode(b"RIFF...").decode("ascii")
+    )
+    assert "Transcribe" in instruction_part["text"]
+
+
+@pytest.mark.parametrize(
+    ("content_type", "expected_format"),
+    [
+        ("audio/wav", "wav"),
+        ("audio/x-wav", "wav"),
+        ("audio/mpeg", "mp3"),
+        ("audio/ogg", "ogg"),
+        ("audio/mp4", "m4a"),
+        ("audio/webm;codecs=opus", "webm"),
+        ("audio/x-matroska", "webm"),  # unknown -> kiosk default container
+    ],
+)
+def test_chat_transcriber_maps_content_type_to_audio_format(
+    monkeypatch, content_type: str, expected_format: str
+) -> None:
+    captured: dict = {}
+
+    def fake_post(url: str, **kwargs) -> _StubChatResponse:
+        captured.update(kwargs)
+        return _StubChatResponse()
+
+    monkeypatch.setattr("app.providers.asr.httpx.post", fake_post)
+    _make_chat_transcriber().transcribe(b"x", content_type)
+    assert captured["json"]["messages"][0]["content"][0]["input_audio"][
+        "format"
+    ] == expected_format
+
+
+def test_chat_transcriber_rejects_empty_content(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.providers.asr.httpx.post",
+        lambda *a, **k: _StubChatResponse(content="   "),
+    )
+    with pytest.raises(RuntimeError):
+        _make_chat_transcriber().transcribe(b"x", "audio/webm")
+
+
+def test_chat_transcriber_surfaces_http_status_errors(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.providers.asr.httpx.post",
+        lambda *a, **k: _StubChatResponse(status_code=429),
+    )
+    with pytest.raises(httpx.HTTPStatusError):
+        _make_chat_transcriber().transcribe(b"x", "audio/webm")
+
+
+def test_container_requires_key_for_openai_chat_asr() -> None:
+    with pytest.raises(ValueError, match="ASR_API_KEY"):
+        build_container(Settings(asr_provider="openai-chat"))
+
+
+def test_container_selects_chat_audio_transcriber() -> None:
+    container = build_container(
+        Settings(asr_provider="openai-chat", asr_api_key="k-test")
+    )
+    assert isinstance(container.asr, OpenAIChatAudioTranscriber)
