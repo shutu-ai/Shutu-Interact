@@ -1,52 +1,108 @@
 {
   "generated_at": "2026-11-09",
+  "live_acceptance_date": "2026-11-10",
   "repository": "https://github.com/shutu-ai/Shutu-Interact",
-  "branch": "feature/mvp-closure",
+  "branch": "master",
   "base_sha": "fc46da5b69b9405a72aff82529965bce525da186",
-  "evaluated_sha": "7435628888b1e050834f14c5f8d1e79dfdc025e0",
-  "evaluated_sha_note": "All gate commands were run on the 7435628 tree (the whole-branch-review fix pass) plus the evidence/docs commit containing this file (docs only after 7435628).",
+  "evaluated_sha": "20d18b9",
+  "evaluated_sha_note": "Gates G0-G4 were evaluated on the feature/mvp-closure chain through 7435628/9e193e8, merged fast-forward into master (user-approved), then extended with 20d18b9 (openai-chat ASR provider + configurable LLM timeout produced by the live acceptance) and the docs commit carrying this file.",
+  "live_acceptance": {
+    "date": "2026-11-10",
+    "tester": "授权成人测试者(产品负责人本人;用户明示授权其在目标设备上完成真实语音/视频互动;儿童接触禁令保持不变)",
+    "device": "用户指定的目标 Windows 11 PC + 真实麦克风 + Chrome/Edge(127.0.0.1 安全上下文);非前台实物平板/大屏形态",
+    "asr": {
+      "provider": "openai-chat",
+      "gateway": "Alibaba Bailian compatible-mode(OpenAI 兼容)",
+      "model": "qwen3-omni-flash",
+      "wire_format": "POST /chat/completions, data-URI input_audio(该网关无 /audio/transcriptions,拒绝 plain-base64,唯一可用形态,已实测探明)"
+    },
+    "engine": {
+      "provider": "llm",
+      "model": "qwen3.8-flash",
+      "same_gateway": true
+    },
+    "automated_drill": {
+      "result": "11/11 steps ok",
+      "method": "headless Chromium + fake mic fed by SAPI-synthesized adult-script WAV (\"I like cats.\", looping)",
+      "verified": [
+        "consent -> age -> topic -> 4 voice turns -> natural finish -> farewell -> auto-return to welcome",
+        "recording indicator visible; stop button enabled mid-recording (review-fix regression)",
+        "half-duplex: mic disabled while Coco speaks",
+        "4 distinct contextual LLM replies",
+        "farewell playback then auto-return to welcome"
+      ]
+    },
+    "human_drills": {
+      "natural_sessions": "2 complete sessions by the adult tester with real voice; both finished naturally at turn 4 with farewell playback and auto-return to welcome (tester confirmed)",
+      "exit_drill": "exit button mid-session: POST /end -> 200, session deleted; speech stops immediately (tester confirmed); contrasts with the benign 404 on /end after natural finish (session already deleted server-side by natural-finish cleanup — privacy requirement working as designed)",
+      "mic_denied": "browser mic permission denied: session starts, zero audio uploads, frontend shows friendly type-instead hint (no backend request = expected)"
+    },
+    "backend_log_audit": {
+      "result": "clean",
+      "details": "0x500, 0 traceback content beyond exception types, 0 transcript or model-response text in logs; natural-finish /end 404 explained by design"
+    },
+    "incidents": [
+      {
+        "issue": "LLM read timeout on 1 turn of session 1 (hardcoded 6s chat client timeout vs real gateway latency)",
+        "behavior": "graceful scripted fallback served to client (HTTP 200, designed degradation)",
+        "fix": "commit 20d18b9: LLM_TIMEOUT_SECONDS env (default 6.0 unchanged); set 15s locally; 3 TDD tests RED->GREEN, suite 137 green"
+      }
+    ]
+  },
   "gates": {
     "g0_baseline": {
       "status": "PASS",
       "summary": "B-01 undefined 'Tuple' annotation fixed (builtin tuple[...]); pkgutil-wide import regression test added; uvicorn boots; pytest green on local 3.14 with CI proving 3.12 strict annotations."
     },
     "g1_real_asr": {
-      "status": "PASS_OFFLINE",
-      "g1_live": "BLOCKED_CREDENTIALS",
-      "summary": "OpenAI-compatible transcriber under SpeechRecognizer protocol; ASR_PROVIDER=mock|openai explicit selection, openai without key refuses to start; 13 offline contract tests (multipart shape, filename mapping, empty transcript, 429, ConnectTimeout, container selection). Live smoke deferred: scripts/asr_smoke.py exists but no provider credentials available in this environment."
+      "status": "PASS",
+      "g1_live": "PASS (2026-11-10)",
+      "summary": "SpeechRecognizer protocol with three explicit providers: mock | openai (POST /audio/transcriptions) | openai-chat (POST /chat/completions with data-URI input_audio, probed live on Alibaba Bailian compatible-mode). Fail-fast without keys, never a silent mock fallback. 20 offline contract tests + live smoke: 3/3 SAPI-synthesized adult-script WAVs correctly transcribed; full browser pipeline drill 11/11; 2 human real-voice sessions."
     },
     "g2_session_lifecycle": {
       "status": "PASS",
-      "summary": "Strict half-duplex (mic gated by voiceState), flowEpoch stale-response guard, ASR failure forces NEW recording (budget 1, original never resent), natural finish auto-deletes server session, 180s duration cap + 60s idle timeout both ends, 404 recovery, exit stops speechSynthesis + recorder tracks; no dialogue content in any browser storage."
+      "summary": "Strict half-duplex (mic gated by voiceState), flowEpoch stale-response guard, ASR failure forces NEW recording (budget 1, original never resent), natural finish auto-deletes server session, 180s duration cap + 60s idle timeout both ends, 404 recovery, exit stops speechSynthesis + recorder tracks; no dialogue content in any browser storage. Live-verified: natural finish deletion (benign /end 404), exit /end 200, half-duplex observed in drill and human sessions."
     },
     "g3_privacy_safety": {
       "status": "PASS",
-      "summary": "Honest privacy copy (over-absolute claim removed), guardian confirmation gate before mic, input-side PII self-disclosure/injection guard (EN+CN) with help-seeking never silenced, transcript never echoed to client, bounded 5MB audio/* uploads, per-session 12/min rate limit, credentials server-side only, robot identity in prompt, docs/privacy-and-pilot-gates.md 已核查13/待核查8."
+      "summary": "Honest privacy copy, guardian confirmation gate before mic, input-side PII self-disclosure/injection guard (EN+CN) with help-seeking never silenced, transcript never echoed to client, bounded 5MB audio/* uploads, per-session 12/min rate limit, credentials server-side only, robot identity in prompt. Live backend-log audit during real-voice acceptance: 0 transcript/model-response text in logs. docs/privacy-and-pilot-gates.md 已核查13/待核查8(A1 供应商已选定,留存条款仍待归档)。"
     },
     "g4_ci_evidence": {
       "status": "PASS",
       "summary": ".github/workflows/ci.yml committed (pytest on 3.12 + vitest + build, mock-only, no secrets); .env.examples complete; README overhauled with measured counts; acceptance checklist restructured into 4 gate categories + failure drill matrix; evidence files written.",
-      "ci_run": {
-        "id": 42657133797,
-        "sha": "fd542a5",
-        "url": "https://github.com/shutu-ai/Shutu-Interact/actions/runs/42657133797",
-        "result": "success",
-        "jobs": "backend (3.12) 12s; frontend 26s — both green on the pushed SHA"
-      }
+      "ci_runs": [
+        {
+          "id": 42657133797,
+          "sha": "fd542a5",
+          "url": "https://github.com/shutu-ai/Shutu-Interact/actions/runs/42657133797",
+          "result": "success"
+        },
+        {
+          "id": 42660648365,
+          "sha": "9e193e8",
+          "result": "success"
+        },
+        {
+          "id": 42769399410,
+          "sha": "master after merge",
+          "result": "success"
+        }
+      ]
     },
     "g5_device": {
-      "status": "BLOCKED_DEVICE",
-      "summary": "No target kiosk hardware (tablet/large screen + real microphone) available in this environment; latency p90 and on-device flows unmeasured."
+      "status": "PASS",
+      "scope_note": "Scoped to the user-designated target Windows PC with a real microphone and an authorized adult tester (2026-11-10). Tablet/large-screen form factor, fullscreen toggle, 180s/60s timeout drills, backend-down and TTL drills were not exercised and remain open deployment checks.",
+      "summary": "Full flow (welcome -> consent -> age -> topic -> 4 voice turns -> natural finish -> farewell -> auto-return) completed twice by the authorized adult tester with real voice; exit drill and mic-denied drill executed; per-turn latency measured honestly (target missed, see latency_p90_ms)."
     },
     "g5_pilot": {
       "status": "BLOCKED_COMPLIANCE",
-      "summary": "No institutional compliance approval (A2) or guardian-authorization decision (A3); ASR vendor retention policy unverified (A1); CORS still LAN-open (A8). Real-child pilot forbidden until these close."
+      "summary": "No institutional compliance approval (A2) or guardian-authorization decision (A3); ASR vendor identified (Alibaba Bailian compatible-mode) but retention/training policy not yet verified or archived (A1); CORS still LAN-open (A8). Real-child pilot forbidden until these close."
     }
   },
   "tests": {
     "backend": {
       "command": "backend/.venv/Scripts/python.exe -m pytest tests/ -q",
-      "result": "122 passed",
+      "result": "137 passed (122 at G4; +12 openai-chat ASR contract incl. parametrized expansion, +3 LLM timeout plumbing)",
       "interpreter_local": "Python 3.14 (PEP 649 lazy annotations)",
       "interpreter_ci": "Python 3.12 (strict annotation evaluation; proves B-01 fix)"
     },
@@ -59,14 +115,19 @@
       "result": "vue-tsc type check clean + vite build succeeded"
     }
   },
-  "latency_p90_ms": null,
-  "latency_p90_note": "not_run — requires real device with real ASR credentials (G1_LIVE + G5_DEVICE); do not fill with a guessed number.",
+  "latency_p90_ms": 9035,
+  "latency_samples_ms": [9035, 7203, 8288],
+  "latency_note": "n=3 per-turn speech-API latencies from the automated real-ASR/LLM drill (p90 of n=3 ~= max = 9035ms). Checklist target 'p90 <= 3000ms' NOT MET — recorded honestly. Decomposition (measured on gateway, warm): ASR qwen3-omni-flash ~3.1-3.9s + LLM qwen3.8-flash ~2.8-3.8s + upload. Config-level alternatives exhausted (qwen3-asr-flash and qwen-audio-3.0-asr-flash reject data-URI; faster omni variants slower; LLM alternates within noise). Reaching <3s requires a streaming/realtime-WebSocket ASR architecture — post-MVP work.",
   "blocking_issues": [
-    "G1_LIVE BLOCKED_CREDENTIALS: no ASR provider key in this environment — run backend/scripts/asr_smoke.py with authorized-adult audio once creds exist",
-    "G5_DEVICE BLOCKED_DEVICE: no kiosk hardware; execute docs/acceptance-checklist.md §三 on target tablet/large screen",
-    "G5_PILOT BLOCKED_COMPLIANCE: close privacy-and-pilot-gates.md A1/A2/A3 (vendor retention policy, institutional approval, guardian authorization) before any real-child contact",
-    "DoD not met: no licensed tester has spoken real English sentences to Coco on the target device yet"
+    "G5_PILOT BLOCKED_COMPLIANCE: close privacy-and-pilot-gates.md A1/A2/A3 (vendor retention policy, institutional approval, guardian authorization) before any real-child contact — child-contact prohibition remains in force",
+    "Deployment checks still open (non-blocking for adult demo): tablet/large-screen form factor, fullscreen toggle, 180s/60s timeout drills, backend-down drill, TTL drill, CORS tightening (A8)",
+    "ASR latency: p90 <= 3s checklist target not met (measured ~7.2-9.0s); realtime streaming ASR is the post-MVP path"
   ],
+  "dod": {
+    "verdict": "满足(限定口径)",
+    "scope": "授权成人测试者(产品负责人,经用户明示授权)于用户指定的目标 Windows 设备上,以真实英语语音完成两次约两分钟的适龄、受控、可安全退出的互动;Coco 正确理解并自然回答;会话随后自动清理(自然结束即删 + 退出 /end 200 均有日志证据)。",
+    "not_covered": "非前台实物平板/大屏部署;非儿童使用——儿童试点仍被 G5_PILOT 阻塞,儿童接触禁令不变。"
+  },
   "evidence_paths": [
     "docs/evidence/mvp-closure-report.md",
     "docs/evidence/mvp-closure.json",
@@ -74,5 +135,6 @@
     "docs/privacy-and-pilot-gates.md",
     "backend/scripts/asr_smoke.py",
     ".github/workflows/ci.yml"
-  ]
+  ],
+  "local_artifacts_note": "2026-11-10 drill evidence (kiosk_drill.js, drill-evidence.json, 8 screenshots, SAPI WAVs) kept in the tester machine's temp workspace, deliberately not committed: synthetic adult-script audio and UI screenshots only, but repo policy keeps session artifacts out of the repository."
 }
